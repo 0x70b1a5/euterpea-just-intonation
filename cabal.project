@@ -1,0 +1,9 @@
+packages: .
+
+source-repository-package
+    type: git
+    location: https://github.com/georgefst/Euterpea2
+    tag: 3bbb079bf95f9c36da0bd8850313ae4a8fbee0cf
+
+-- Allow newer versions of dependencies
+allow-newer: all 

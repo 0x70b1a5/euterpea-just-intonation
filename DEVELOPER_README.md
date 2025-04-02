@@ -147,7 +147,7 @@ You can use GitHub Actions to easily build Windows executables without needing W
          run: copy WINDOWS_README.md dist/windows/README.md
        
        - name: Upload artifacts
-         uses: actions/upload-artifact@v3
+         uses: actions/upload-artifact@v4
          with:
            name: JustIntonationMusic
            path: dist/windows/

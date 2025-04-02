@@ -119,18 +119,82 @@ runMyMusic :: IO ()
 runMyMusic = do
   -- This tries to import and run the renderMyMusic function from MyMusic.hs
   -- If you have MyMusic.hs in the same directory, uncomment the line below:
-  MyMusic.renderMyMusic
+  -- MyMusic.renderMyMusic
   
   -- Otherwise, use the default melody
-  -- putStrLn "No custom music found, using default melody..."
-  -- writeJustWav "just.wav" 4.0 justMelody
+  putStrLn "No custom music found, using default melody..."
+  writeJustWav "just.wav" 4.0 justMelody
 
--- Main function - choose what to run
+-- Main function with a simple terminal UI
 main :: IO ()
 main = do
-  putStrLn "Writing to WAV file with just intonation..."
+  putStrLn "========================================"
+  putStrLn "Just Intonation Music Generator"
+  putStrLn "========================================"
+  putStrLn "Choose an option:"
+  putStrLn "1. Play default melody"
+  putStrLn "2. Play major arpeggio"
+  putStrLn "3. Play minor arpeggio"
+  putStrLn "4. Play just scale"
+  putStrLn "5. Exit"
+  putStrLn "Enter your choice (1-5): "
   
-  -- Choose which function to run:
-  writeJustWav "just.wav" 4.0 justMelody  -- Default melody
-  runExample    -- Run an example from Examples.hs
-  runMyMusic    -- Run your music from MyMusic.hs
+  choice <- getLine
+  case choice of
+    "1" -> do
+      putStrLn "Creating default melody..."
+      writeJustWav "just_melody.wav" 4.0 justMelody
+      putStrLn "Done! Check just_melody.wav in the current folder."
+      main -- Return to menu
+    
+    "2" -> do
+      putStrLn "Creating major arpeggio..."
+      let majorArpeggio = line
+            [ Prim (Note qn (j 440 unison)),      -- Root
+              Prim (Note qn (j 440 majorThird)),  -- Major third
+              Prim (Note qn (j 440 perfectFifth)), -- Perfect fifth
+              Prim (Note qn (j 440 octave)),      -- Octave
+              Prim (Note qn (j 440 perfectFifth)), -- Back down to fifth
+              Prim (Note qn (j 440 majorThird)),  -- Back down to third
+              Prim (Note qn (j 440 unison))       -- Back to root
+            ]
+      writeJustWav "major_arpeggio.wav" 4.0 majorArpeggio
+      putStrLn "Done! Check major_arpeggio.wav in the current folder."
+      main -- Return to menu
+    
+    "3" -> do
+      putStrLn "Creating minor arpeggio..."
+      let minorArpeggio = line
+            [ Prim (Note qn (j 440 unison)),      -- Root
+              Prim (Note qn (j 440 minorThird)),  -- Minor third
+              Prim (Note qn (j 440 perfectFifth)), -- Perfect fifth
+              Prim (Note qn (j 440 octave)),      -- Octave
+              Prim (Note qn (j 440 perfectFifth)), -- Back down to fifth
+              Prim (Note qn (j 440 minorThird)),  -- Back down to third
+              Prim (Note qn (j 440 unison))       -- Back to root
+            ]
+      writeJustWav "minor_arpeggio.wav" 4.0 minorArpeggio
+      putStrLn "Done! Check minor_arpeggio.wav in the current folder."
+      main -- Return to menu
+    
+    "4" -> do
+      putStrLn "Creating just scale..."
+      let justScale = line
+            [ Prim (Note qn (j 440 unison)),           -- A4 (440Hz)
+              Prim (Note qn (j 440 (9 % 8))),          -- B4 (9/8 ratio)
+              Prim (Note qn (j 440 majorThird)),       -- C#5 (5/4 ratio)
+              Prim (Note qn (j 440 perfectFourth)),    -- D5 (4/3 ratio)
+              Prim (Note qn (j 440 perfectFifth)),     -- E5 (3/2 ratio)
+              Prim (Note qn (j 440 majorSixth)),       -- F#5 (5/3 ratio)
+              Prim (Note qn (j 440 (15 % 8))),         -- G#5 (15/8 ratio)
+              Prim (Note qn (j 440 octave))            -- A5 (2/1 ratio)
+            ]
+      writeJustWav "just_scale.wav" 4.0 justScale
+      putStrLn "Done! Check just_scale.wav in the current folder."
+      main -- Return to menu
+    
+    "5" -> putStrLn "Goodbye!"
+    
+    _ -> do
+      putStrLn "Invalid choice. Please try again."
+      main -- Return to menu

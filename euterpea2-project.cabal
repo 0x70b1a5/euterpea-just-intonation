@@ -15,10 +15,13 @@ common warnings
 
 executable euterpea2-project
     import:           warnings
-    main-is:          Main.hs
+    main-is:          AppMain.hs
+    other-modules:    Main, 
+                     MainGUI
     build-depends:    base ^>=4.16.0.0,
                      Euterpea,
                      HSoM,
-                     UISF
+                     UISF,
+                     directory
     hs-source-dirs:   .
     default-language: Haskell2010

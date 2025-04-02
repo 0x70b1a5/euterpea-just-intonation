@@ -1,0 +1,52 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Haskell
+      uses: haskell-actions/setup@v2
+      with:
+        ghc-version: '9.4.8'
+        cabal-version: '3.10.2.0'
+    
+    - name: Update Cabal package list
+      run: cabal update
+    
+    - name: Install dependencies
+      run: |
+        cabal install --lib Euterpea
+        cabal install --lib UISF
+        cabal install --lib HSoM
+    
+    - name: Build
+      run: cabal build
+    
+    - name: Create executable directory
+      run: mkdir -p dist/windows
+    
+    - name: Install executable
+      run: cabal install --installdir=dist/windows exe:euterpea2-project
+    
+    - name: Rename executable
+      run: |
+        cd dist/windows
+        ren euterpea2-project.exe JustIntonationMusic.exe
+    
+    - name: Copy README
+      run: copy WINDOWS_README.md dist/windows/README.md
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: JustIntonationMusic
+        path: dist/windows/

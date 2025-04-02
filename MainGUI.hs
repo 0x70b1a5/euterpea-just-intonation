@@ -7,6 +7,7 @@ import System.Exit
 import Data.Ratio
 import Euterpea
 import Main hiding (main)
+import qualified TrackerMain
 
 -- | A very simple terminal-based UI for non-technical users
 mainGUI :: IO ()
@@ -23,10 +24,11 @@ mainGUI = do
   putStrLn "1. Generate Default Melody"
   putStrLn "2. Generate Major Arpeggio"
   putStrLn "3. Generate Minor Arpeggio"
-  putStrLn "4. Generate Just Scale"
-  putStrLn "5. Exit"
+  putStrLn "4. Generate Just Scale" 
+  putStrLn "5. Open Tracker Interface"
+  putStrLn "6. Exit"
   putStrLn "========================================"
-  putStrLn "Enter your choice (1-5): "
+  putStrLn "Enter your choice (1-6): "
   
   choice <- getLine
   case choice of
@@ -87,6 +89,12 @@ mainGUI = do
       mainGUI
     
     "5" -> do
+      putStrLn "Opening Tracker interface..."
+      TrackerMain.trackerMenu
+      waitForKeypress
+      mainGUI
+      
+    "6" -> do
       putStrLn "Thank you for using Just Intonation Music Generator!"
       exitSuccess
     

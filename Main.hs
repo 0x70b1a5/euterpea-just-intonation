@@ -5,6 +5,8 @@ module Main where
 import Data.Ratio
 import Debug.Trace
 import Euterpea
+import qualified TrackerMain
+import qualified TrackerTest
 
 -- Just Intonation Types
 type JustPitch = (Double, Ratio Integer) -- (base frequency in Hz, ratio)
@@ -136,8 +138,10 @@ main = do
   putStrLn "2. Play major arpeggio"
   putStrLn "3. Play minor arpeggio"
   putStrLn "4. Play just scale"
-  putStrLn "5. Exit"
-  putStrLn "Enter your choice (1-5): "
+  putStrLn "5. Open Tracker interface"
+  putStrLn "6. Run Tracker tests"
+  putStrLn "7. Exit"
+  putStrLn "Enter your choice (1-7): "
   
   choice <- getLine
   case choice of
@@ -193,7 +197,19 @@ main = do
       putStrLn "Done! Check just_scale.wav in the current folder."
       main -- Return to menu
     
-    "5" -> putStrLn "Goodbye!"
+    "5" -> do
+      putStrLn "Opening Tracker interface..."
+      TrackerMain.trackerMenu
+      main -- Return to menu
+    
+    "6" -> do
+      putStrLn "Running Tracker tests..."
+      TrackerTest.runTrackerTests
+      putStrLn "Press Enter to return to the main menu."
+      _ <- getLine
+      main -- Return to menu
+    
+    "7" -> putStrLn "Goodbye!"
     
     _ -> do
       putStrLn "Invalid choice. Please try again."

@@ -1,6 +1,6 @@
 # Just Intonation Music with Euterpea
 
-This project extends Euterpea with Just Intonation capabilities, allowing you to compose and render music with pure frequency ratios instead of equal temperament.
+This project extends Euterpea with Just Intonation capabilities, allowing you to compose and render music with pure frequency ratios instead of equal temperament. It now includes a tracker-style interface for creating music similar to classic DOS tracker programs.
 
 ## Getting Started
 
@@ -214,5 +214,82 @@ To run your composition:
 2. Make sure your `main` function calls `writeJustWav` with your composition
 3. Run `cabal run` from the project directory
 4. Play the resulting WAV file with any media player
+
+## Using the Tracker Interface
+
+The tracker interface allows you to create music using a grid-based system, where:
+- Rows represent time steps
+- Columns represent different voices/instruments
+- Each cell can contain a note frequency or ratio
+
+To use the tracker:
+
+1. Run the application and select option 5 from the main menu
+2. Choose from the following tracker options:
+   - Load and render an existing tracker file
+   - Display information about a tracker file
+   - Create an example tracker file
+   - Create an empty tracker file
+   - Export a tracker file to CSV for editing in a spreadsheet
+   
+### Tracker File Format
+
+Tracker files use a JSON format with the following structure:
+
+```json
+{
+  "baseFrequency": 440.0,
+  "baseTempo": 120.0,
+  "rowsPerBeat": 4,
+  "numRows": 32,
+  "numChannels": 4,
+  "data": [
+    {
+      "tempo": {"inputString": "120", "value": 120.0},
+      "channels": [
+        {
+          "note": {"inputString": "440", "frequency": 440.0},
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        // More channels...
+      ]
+    },
+    // More rows...
+  ]
+}
+```
+
+Notes can be entered as:
+- Direct frequencies (e.g., "440" for A4)
+- Ratios (e.g., "3:2" for a perfect fifth above the base or previous note)
+
+### Testing the Tracker Backend
+
+To verify that the tracker backend is working correctly, you can run the built-in tests:
+
+1. From the main menu, select option 6 "Run Tracker tests"
+2. The tests will validate:
+   - Note parsing (direct frequencies and ratios)
+   - Tempo parsing
+   - Instrument handling
+   - Volume handling
+   - Effect handling
+   - Complete tracker file conversion
+
+You can also load and render example tracker files from the tracker menu:
+1. From the main menu, select option 5 "Open Tracker interface"
+2. From the tracker menu, select option 6 "Load and render test files"
+3. Choose from the available test files:
+   - Basic example tracker (simple melody and chord)
+   - Complex example tracker (various instruments, effects, and tempo changes)
+   - Instrument test tracker (comparison of different instrument types)
+
+The tracker system currently supports:
+- Four instrument types: sine (sin), square (sqr), sawtooth (saw), and triangle (tri)
+- Volume control (0-100%)
+- Tempo changes (direct BPM or ratios)
+- Basic effects (arpeggio, transpose)
 
 Enjoy creating music with pure ratios and have fun exploring the world of Just Intonation!

@@ -1,0 +1,473 @@
+{
+  "baseFrequency": 440.0,
+  "baseTempo": 120.0,
+  "rowsPerBeat": 4,
+  "numRows": 32,
+  "numChannels": 4,
+  "data": [
+    {
+      "tempo": {"inputString": "120", "value": 120.0},
+      "channels": [
+        {
+          "note": {"inputString": "440", "frequency": 440.0},
+          "instrument": "sin",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "550", "frequency": 550.0},
+          "instrument": "sqr",
+          "volume": 0.6,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "660", "frequency": 660.0},
+          "instrument": "tri",
+          "volume": 0.7,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "880", "frequency": 880.0},
+          "instrument": "saw",
+          "volume": 0.5,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": {"inputString": "100", "value": 100.0},
+      "channels": [
+        {
+          "note": {"inputString": "5:4", "frequency": 550.0},
+          "instrument": "sin",
+          "volume": 0.9,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "3:2", "frequency": 660.0},
+          "instrument": "sin",
+          "volume": 0.7,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "2:1", "frequency": 880.0},
+          "instrument": "sin",
+          "volume": 0.6,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "586.67", "frequency": 586.67},
+          "instrument": "sin",
+          "volume": 0.7,
+          "effect": {"command": "A", "value": "", "inputString": "A"}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": {"inputString": "140", "value": 140.0},
+      "channels": [
+        {
+          "note": {"inputString": "495", "frequency": 495.0},
+          "instrument": "sqr",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "4:3", "frequency": 586.67},
+          "instrument": "sqr",
+          "volume": 0.6,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "3:2", "frequency": 660.0},
+          "instrument": "sqr",
+          "volume": 0.5,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": {"inputString": "733.33", "frequency": 733.33},
+          "instrument": "tri",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "825", "frequency": 825.0},
+          "instrument": "saw",
+          "volume": 0.7,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": {"inputString": "3:2", "value": 180.0},
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "9:8", "frequency": 495.0},
+          "instrument": "sin",
+          "volume": 0.9,
+          "effect": {"command": "T", "value": "5:4", "inputString": "T5:4"}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": {"inputString": "440", "frequency": 440.0},
+          "instrument": "sin",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "550", "frequency": 550.0},
+          "instrument": "sin", 
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "660", "frequency": 660.0},
+          "instrument": "sin",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": null,
+      "channels": [
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": null,
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "880", "frequency": 880.0},
+          "instrument": "sin",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    },
+    {
+      "tempo": {"inputString": "120", "value": 120.0},
+      "channels": [
+        {
+          "note": {"inputString": "440", "frequency": 440.0},
+          "instrument": "sin",
+          "volume": 1.0,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "550", "frequency": 550.0},
+          "instrument": "sin",
+          "volume": 0.8,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "660", "frequency": 660.0},
+          "instrument": "sin",
+          "volume": 0.6,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        },
+        {
+          "note": {"inputString": "880", "frequency": 880.0},
+          "instrument": "sin",
+          "volume": 0.4,
+          "effect": {"command": null, "value": null, "inputString": ""}
+        }
+      ]
+    }
+  ]
+}

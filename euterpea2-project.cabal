@@ -1,4 +1,4 @@
-cabal-version:      3.0
+cabal-version:      2.4
 name:               euterpea2-project
 version:            0.1.0.0
 synopsis:           Euterpea2 and HSoM examples
@@ -23,7 +23,7 @@ executable euterpea2-project
                       TrackerToMusic,
                       TrackerMain,
                       TrackerTest
-    build-depends:    base ^>=4.16.0.0,
+    build-depends:    base ^>=4.12.0.0,
                       Euterpea,
                       HSoM,
                       UISF,

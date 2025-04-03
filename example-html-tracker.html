@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOS-Style Frequency Tracker</title>
+    <style>
+        /* Basic DOS-like styling */
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #000080; /* Dark Blue */
+            color: #C0C0C0; /* Light Gray */
+            margin: 0;
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+            user-select: none; /* Prevent accidental text selection outside cells */
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 0.5em;
+        }
+
+        .tracker-container {
+            border: 2px solid #C0C0C0;
+            padding: 5px;
+            background-color: #000000; /* Black background for tracker */
+            width: 98%; /* Adjusted width */
+            max-width: 1000px; /* Increased max-width for more columns */
+            overflow-y: auto; /* Allow scrolling within tracker if needed */
+            flex-grow: 1; /* Allow tracker to take available space */
+            margin-bottom: 1em;
+            user-select: none; /* Prevent selection inside container */
+        }
+         .tracker-container table {
+             user-select: none; /* Prevent selection inside table */
+         }
+         /* Allow text selection ONLY in editable cells */
+         .tracker-container td[contenteditable="true"] {
+             user-select: text;
+         }
+
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* Helps with column widths */
+        }
+
+        th, td {
+            border: 1px solid #444444; /* Darker gray borders */
+            padding: 2px 3px; /* Reduced padding slightly */
+            text-align: center;
+            height: 20px; /* Fixed row height */
+            overflow: hidden; /* Prevent content spillover */
+            white-space: nowrap; /* Prevent wrapping */
+            font-size: 0.9em; /* Slightly smaller font */
+            box-sizing: border-box; /* Include border in width/height */
+        }
+
+        th {
+            background-color: #444444;
+            color: #FFFFFF; /* White */
+        }
+
+        /* Column Widths */
+        col.row-num { width: 4%; }
+        col.tempo { width: 5%; } /* New Tempo column width */
+        col.note { width: 8%; } /* Adjusted */
+        col.inst { width: 4%; } /* Adjusted */
+        col.vol { width: 4%; }  /* Adjusted */
+        col.fx { width: 4%; }   /* Adjusted */
+        col.separator { width: 1px; background-color: #666666; border: none;} /* Separator style */
+
+
+        /* Row numbers */
+        td.row-num-cell {
+            background-color: #222222;
+            color: #888888; /* Darker gray for row numbers */
+            font-weight: bold;
+            user-select: none; /* Prevent selecting row numbers */
+            text-align: right;
+            padding-right: 5px;
+        }
+        /* Focused Row Highlight (different from selection) */
+         tr.focused-row > td.row-num-cell {
+             background-color: #666600 !important; /* Dark Yellowish */
+             color: #FFFFFF !important;
+         }
+
+
+        /* Editable cells */
+        .note-cell, .inst-cell, .vol-cell, .fx-cell, .tempo-cell {
+            cursor: text;
+            outline: none; /* Remove browser default focus outline */
+        }
+
+        .tempo-cell { color: #FFA500; } /* Orange */
+        .note-cell { color: #FFFF00; font-weight: bold; } /* Yellow */
+        .inst-cell { color: #00FFFF; } /* Cyan */
+        .vol-cell { color: #00FF00; } /* Green */
+        .fx-cell { color: #FF00FF; } /* Magenta */
+
+        /* Cell Focus (distinct from selection) */
+        td:focus {
+            background-color: #777777 !important; /* Darker gray focus */
+            color: #FFFFFF !important;
+            /* overflow: visible; /* Allow seeing full content when editing */
+            /* white-space: normal; */
+            box-shadow: inset 0 0 0 1px #FFFFFF; /* White inner border on focus */
+            z-index: 10; /* Ensure focus border is visible */
+            position: relative; /* Needed for z-index */
+        }
+
+         /* Selection Highlight */
+         td.selected-cell {
+             background-color: #003366 !important; /* Dark blue selection */
+             color: #FFFFFF !important; /* Ensure text is visible */
+             box-shadow: inset 0 0 0 1px #0088FF; /* Blue inner border */
+         }
+         /* Ensure focus style overrides selection style for the active cell */
+          td.selected-cell:focus {
+             background-color: #225588 !important; /* Slightly lighter blue focus+selection */
+             box-shadow: inset 0 0 0 1px #FFFFFF; /* White inner border on focus */
+          }
+
+
+        /* Playback highlight */
+        .playing-row td {
+            background-color: #004400 !important; /* Dark Green highlight */
+            color: #FFFFFF !important; /* Default white text on highlight */
+        }
+        /* Keep original colors for data cells on playing row */
+         .playing-row .tempo-cell { color: #FFA500 !important; }
+         .playing-row .note-cell { color: #FFFF00 !important; }
+         .playing-row .inst-cell { color: #00FFFF !important; }
+         .playing-row .vol-cell { color: #00FF00 !important; }
+         .playing-row .fx-cell { color: #FF00FF !important; }
+         .playing-row .row-num-cell { color: #888888 !important; } /* Keep row number gray */
+         /* Ensure playback highlight doesn't override selection/focus background */
+         .playing-row td.selected-cell { background-color: #005533 !important; } /* Mix of green and blue */
+         .playing-row td.selected-cell:focus { background-color: #227755 !important; }
+
+
+        .controls {
+            margin-top: 10px;
+            text-align: center;
+            display: flex; /* Use flexbox for button layout */
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center; /* Center buttons */
+            gap: 10px; /* Space between buttons */
+        }
+
+        button {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #C0C0C0; /* Light Gray */
+            color: #000000; /* Black */
+            border: 2px outset #FFFFFF;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+         button:disabled {
+             background-color: #888888;
+             color: #444444;
+             border-color: #aaaaaa;
+             cursor: not-allowed;
+         }
+
+        button:active:not(:disabled) {
+            border-style: inset;
+        }
+
+        .config-container, .capture-container {
+             margin-top: 10px;
+             margin-bottom: 5px;
+             font-size: 0.9em;
+             display: flex;
+             flex-wrap: wrap;
+             justify-content: center;
+             gap: 15px; /* Spacing between items */
+             width: 100%;
+             max-width: 1000px; /* Match tracker width */
+        }
+         .config-container label, .capture-container span {
+             margin-right: 5px;
+         }
+         .config-container input[type="number"] {
+             font-family: 'Courier New', Courier, monospace; background-color: #000000; color: #C0C0C0; border: 1px solid #C0C0C0; width: 50px; padding: 2px; text-align: center;
+         }
+         /* Style for captured value display */
+         .capture-container {
+             background-color: #000000;
+             border: 1px solid #444444;
+             padding: 5px 10px;
+             color: #FFFF00; /* Yellow text for captured values */
+         }
+          .capture-container strong {
+              color: #FFFFFF; /* White label */
+          }
+
+
+        #message-box {
+            position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background-color: #FFFF00; color: #000000; padding: 5px 10px; border: 1px solid #000000; font-size: 0.9em; display: none; z-index: 100; text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>DOS-Style Frequency Tracker</h1>
+
+    <div class="config-container">
+        <div>
+            <label for="base-freq">Base Freq (Hz):</label>
+            <input type="number" id="base-freq" value="440" step="1">
+        </div>
+        <div>
+            <label for="base-tempo">Base Tempo (BPM):</label>
+            <input type="number" id="base-tempo" value="120" min="30" max="300" step="1">
+        </div>
+        <div>
+            <label for="rows-per-beat">Rows/Beat:</label>
+            <input type="number" id="rows-per-beat" value="4" min="1" max="16" step="1">
+        </div>
+    </div>
+
+    <div class="capture-container">
+        <span><strong>Captured Freq:</strong> <span id="captured-freq-display">440.00</span> Hz</span>
+        <span><strong>Captured BPM:</strong> <span id="captured-tempo-display">120.0</span></span>
+     </div>
+
+
+    <div class="tracker-container" id="tracker-container">
+        <table id="tracker-table">
+             <colgroup>
+                <col class="row-num">
+                <col class="separator">
+                <col class="tempo"> <col class="separator">
+                <col class="note"> <col class="inst"> <col class="vol"> <col class="fx"> <col class="separator">
+                <col class="note"> <col class="inst"> <col class="vol"> <col class="fx"> <col class="separator">
+                <col class="note"> <col class="inst"> <col class="vol"> <col class="fx"> <col class="separator">
+                <col class="note"> <col class="inst"> <col class="vol"> <col class="fx">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Row</th> <th></th> <th>BPM</th> <th></th>
+                    <th>Ch1 Note</th> <th>Inst</th> <th>Vol</th> <th>Fx</th> <th></th>
+                    <th>Ch2 Note</th> <th>Inst</th> <th>Vol</th> <th>Fx</th> <th></th>
+                    <th>Ch3 Note</th> <th>Inst</th> <th>Vol</th> <th>Fx</th> <th></th>
+                    <th>Ch4 Note</th> <th>Inst</th> <th>Vol</th> <th>Fx</th>
+                </tr>
+            </thead>
+            <tbody id="tracker-body">
+                </tbody>
+        </table>
+    </div>
+
+    <div class="controls">
+        <button id="play-button">Play</button>
+        <button id="stop-button">Stop</button>
+        <button id="export-wav-button">Export WAV</button>
+        <button id="export-json-button">Export JSON</button>
+    </div>
+
+    <div id="message-box"></div>
+
+    <script>
+        // --- Configuration ---
+        const NUM_ROWS = 32; // Can be increased, but watch performance
+        const NUM_CHANNELS = 4;
+        const DEFAULT_VOLUME = 100;
+        const DEFAULT_INSTRUMENT = 'sin';
+        const INSTRUMENT_MAP = { 'sin': 'sine', 'sqr': 'square', 'saw': 'sawtooth', 'tri': 'triangle' };
+        const VALID_INSTRUMENTS = Object.keys(INSTRUMENT_MAP);
+        const EXPORT_SAMPLE_RATE = 44100;
+        const EXPORT_BIT_DEPTH = 16;
+        const COLUMN_TYPES = ['tempo', 'note', 'inst', 'vol', 'fx']; // Order for navigation
+
+        // --- DOM References ---
+        const BASE_FREQ_INPUT = document.getElementById('base-freq');
+        const BASE_TEMPO_INPUT = document.getElementById('base-tempo');
+        const ROWS_PER_BEAT_INPUT = document.getElementById('rows-per-beat');
+        const TRACKER_BODY = document.getElementById('tracker-body');
+        const TRACKER_CONTAINER = document.getElementById('tracker-container');
+        const PLAY_BUTTON = document.getElementById('play-button');
+        const STOP_BUTTON = document.getElementById('stop-button');
+        const EXPORT_WAV_BUTTON = document.getElementById('export-wav-button');
+        const EXPORT_JSON_BUTTON = document.getElementById('export-json-button');
+        const MESSAGE_BOX = document.getElementById('message-box');
+        const CAPTURED_FREQ_DISPLAY = document.getElementById('captured-freq-display');
+        const CAPTURED_TEMPO_DISPLAY = document.getElementById('captured-tempo-display');
+
+
+        // --- State Variables ---
+        let audioContext = null;
+        let masterGain = null;
+        let channelOscillators = new Array(NUM_CHANNELS).fill(null);
+        let channelGains = new Array(NUM_CHANNELS).fill(null);
+        // Tracks {frequency, instrument} currently playing for phase continuity
+        let channelPlayingData = new Array(NUM_CHANNELS).fill({ frequency: null, instrument: null });
+        // Holds all pattern data: patternData[row][channel]
+        let patternData = [];
+        let isPlaying = false;
+        let currentPlayRow = 0; // Row index for playback cursor
+        let playbackIntervalId = null;
+        let lastRowTime = 0; // For precise Web Audio scheduling
+        // Captured values for ratio calculations
+        let capturedFrequencyValue = parseFloat(BASE_FREQ_INPUT.value) || 440.0;
+        let capturedTempoValue = parseFloat(BASE_TEMPO_INPUT.value) || 120.0;
+        let currentlyEditingCell = null; // Reference to the cell being edited
+        // Tracks cell focus position {row, track, type}
+        let focusPos = { row: 0, track: 0, type: 'note' };
+        // Tracks selection range {row, track, type}
+        let selectionStartPos = null;
+        let selectionEndPos = null;
+        let isSelecting = false; // Currently unused, for potential mouse selection
+        // Internal buffer for copy/paste
+        let copiedSelectionData = null;
+
+        // --- Audio Initialization ---
+        function initAudio() {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(e => console.error("Error resuming AudioContext:", e));
+                return;
+            }
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    masterGain = audioContext.createGain();
+                    masterGain.gain.setValueAtTime(0.5, audioContext.currentTime); // Master volume
+                    masterGain.connect(audioContext.destination);
+                    console.log("AudioContext initialized.");
+                } catch (e) {
+                    console.error("Web Audio API is not supported", e);
+                    showMessage("Error: Web Audio API not supported.");
+                    audioContext = null;
+                }
+            }
+        }
+
+        // --- Data Model Initialization ---
+        function initializePatternData() {
+            patternData = [];
+            // Initialize captured values from config inputs
+            capturedFrequencyValue = parseFloat(BASE_FREQ_INPUT.value) || 440.0;
+            capturedTempoValue = parseFloat(BASE_TEMPO_INPUT.value) || 120.0;
+            updateCapturedValueDisplay(); // Update display
+
+            // Create empty data structure for all rows/channels
+            for (let r = 0; r < NUM_ROWS; r++) {
+                const row = [];
+                // Tempo data structure (stored only once per row, associated with channel 0)
+                const tempoData = { tempo: { inputString: "", value: null } }; // value stores calculated BPM
+
+                for (let c = 0; c < NUM_CHANNELS; c++) {
+                    const channelData = {
+                        note: { inputString: "", frequency: null },
+                        instrument: DEFAULT_INSTRUMENT,
+                        instrumentInputString: "", // Store raw input for display logic
+                        volume: DEFAULT_VOLUME / 100.0, // Internal volume 0.0-1.0
+                        volumeInputString: "", // Store raw input for display logic
+                        effect: { command: null, value: null, inputString: "" } // Store raw input
+                    };
+                    // Merge tempo data only into the first channel object
+                    row.push(c === 0 ? { ...channelData, ...tempoData } : channelData);
+                }
+                patternData.push(row);
+            }
+            console.log("Pattern data initialized.");
+        }
+
+        // --- Get Effective Value (Handles Continuation) ---
+        // Searches backwards from startRow to find the last entered value for a given type/channel
+        function getEffectiveValue(startRow, channel, type) {
+            let value = null;
+            let inputString = ""; // Keep track of the original input string
+            let found = false;    // Flag if a non-empty value was found
+
+            for (let r = startRow; r >= 0; r--) {
+                 const rowData = patternData[r];
+                 if (!rowData) continue; // Safety check
+                 let data;
+
+                 if (type === 'tempo') {
+                     // Tempo is stored in channel 0's data
+                     data = rowData[0]?.tempo;
+                     // Check if inputString exists and is non-empty
+                     if (data && data.inputString) {
+                         value = data.value; // Use the pre-calculated BPM value
+                         inputString = data.inputString;
+                         found = true;
+                         break; // Found the last entered value
+                     }
+                 } else {
+                     // Note, Inst, Vol, Fx are per-channel
+                     data = rowData[channel];
+                     if (!data) continue; // Safety check
+
+                     switch (type) {
+                         case 'note':
+                             if (data.note && data.note.inputString) {
+                                 value = data.note.frequency; // Use the pre-calculated frequency
+                                 inputString = data.note.inputString;
+                                 found = true;
+                             }
+                             break;
+                         case 'inst':
+                             // Check the specific input string for this cell type
+                             if (data.instrumentInputString) {
+                                 value = data.instrument; // Return the validated instrument type
+                                 inputString = data.instrumentInputString;
+                                 found = true;
+                             }
+                             break;
+                         case 'vol':
+                              if (data.volumeInputString) {
+                                 value = data.volume; // Return the internal volume (0.0-1.0)
+                                 inputString = data.volumeInputString;
+                                 found = true;
+                             }
+                             break;
+                          case 'fx':
+                             if (data.effect && data.effect.inputString) {
+                                 value = data.effect; // Return the whole effect object
+                                 inputString = data.effect.inputString;
+                                 found = true;
+                             }
+                             break;
+                     }
+                 }
+                  // Exit loop once a non-empty inputString is found for the type
+                  if (found) break;
+            }
+
+             // Return defaults only if no value was ever entered in rows above (or row 0)
+             if (!found) {
+                 switch (type) {
+                     case 'tempo': value = parseFloat(BASE_TEMPO_INPUT.value) || 120; break;
+                     case 'note': value = null; break; // No default frequency if none entered
+                     case 'inst': value = DEFAULT_INSTRUMENT; break;
+                     case 'vol': value = DEFAULT_VOLUME / 100.0; break;
+                     case 'fx': value = { command: null, value: null, inputString: "" }; break;
+                 }
+             }
+
+            // Return structure consistent for note type { frequency, inputString }
+            // For others, just return the calculated/default value
+            if (type === 'note') {
+                 return { frequency: value, inputString: inputString };
+            } else {
+                return value;
+            }
+        }
+
+
+        // --- UI Generation & Updates ---
+        function generateTrackerTable() {
+            TRACKER_BODY.innerHTML = ''; // Clear only body
+            for (let r = 0; r < NUM_ROWS; r++) {
+                const tr = document.createElement('tr');
+                tr.dataset.row = r;
+
+                // Row number cell
+                const tdRow = document.createElement('td');
+                tdRow.textContent = r.toString().padStart(2, '0');
+                tdRow.classList.add('row-num-cell');
+                tr.appendChild(tdRow);
+                tr.appendChild(createSeparatorCell()); // Separator
+
+                // Tempo Cell (Data stored/associated with channel 0)
+                const tdTempo = createEditableCell(r, 0, 'tempo');
+                tr.appendChild(tdTempo);
+                tr.appendChild(createSeparatorCell()); // Separator
+
+                // Channel Cells
+                for (let c = 0; c < NUM_CHANNELS; c++) {
+                    tr.appendChild(createEditableCell(r, c, 'note'));
+                    tr.appendChild(createEditableCell(r, c, 'inst'));
+                    tr.appendChild(createEditableCell(r, c, 'vol'));
+                    tr.appendChild(createEditableCell(r, c, 'fx'));
+                    // Add separator after each channel block
+                    if (c < NUM_CHANNELS - 1) {
+                        tr.appendChild(createSeparatorCell());
+                    }
+                }
+                TRACKER_BODY.appendChild(tr);
+            }
+            updateFocusAndSelectionStyles(); // Apply initial focus/selection style
+            console.log("Tracker table generated.");
+        }
+
+        // Creates a single editable table cell
+        function createEditableCell(r, c, type) {
+            const td = document.createElement('td');
+            td.classList.add(`${type}-cell`); // General class + specific type
+            td.dataset.track = c; // Track index (even for tempo, associated with 0)
+            td.dataset.type = type; // Cell type ('note', 'inst', etc.)
+            td.dataset.row = r; // Row index
+            td.contentEditable = true;
+            td.spellcheck = false; // Disable spellcheck
+            // Display value based on the raw input stored in the data model
+            td.textContent = getCellDisplayValue(r, c, type);
+            addCellEventListeners(td); // Add focus, blur, keydown listeners
+            return td;
+        }
+
+        // Creates a non-editable separator cell
+        function createSeparatorCell() {
+             const td = document.createElement('td');
+             td.classList.add('separator-cell');
+             // Optionally set contenteditable to false if needed, but default is fine
+             return td;
+        }
+
+        // Attaches event listeners to an editable cell
+        function addCellEventListeners(cellElement) {
+            cellElement.addEventListener('focus', handleCellFocus);
+            cellElement.addEventListener('blur', handleCellBlur);
+            cellElement.addEventListener('keydown', handleCellKeyDown);
+            // Add mousedown for selection later if needed for mouse support
+        }
+
+        // Updates visual styles for focus row and selected cell range
+        function updateFocusAndSelectionStyles() {
+            // Clear previous styles first
+            document.querySelectorAll('.focused-row').forEach(el => el.classList.remove('focused-row'));
+            document.querySelectorAll('.selected-cell').forEach(el => el.classList.remove('selected-cell'));
+
+            // Apply focus row style (visual cue for copy/paste target row)
+            const focusedRowEl = TRACKER_BODY.querySelector(`tr[data-row="${focusPos.row}"]`);
+            if (focusedRowEl) {
+                focusedRowEl.classList.add('focused-row');
+            }
+
+            // Apply selection styles if a selection range exists
+            if (selectionStartPos && selectionEndPos) {
+                const bounds = getSelectionBounds();
+                if (!bounds) return; // Exit if bounds are invalid
+
+                // Iterate through rows and columns within the calculated bounds
+                for (let r = bounds.minRow; r <= bounds.maxRow; r++) {
+                    const cells = TRACKER_BODY.querySelectorAll(`tr[data-row="${r}"] td[contenteditable="true"]`);
+                    cells.forEach(cell => {
+                        // Calculate the overall column index for the current cell
+                        const cellColIdx = getCellOverallIndex(parseInt(cell.dataset.row), parseInt(cell.dataset.track), cell.dataset.type);
+                        // Apply 'selected-cell' class if within the selection bounds
+                        if (cellColIdx >= bounds.minColIdx && cellColIdx <= bounds.maxColIdx) {
+                            cell.classList.add('selected-cell');
+                        }
+                    });
+                }
+            }
+             // Ensure the currently focused cell has the focus style applied
+             // This might override the selection style for the single active cell
+             // const focusEl = getCellElement(focusPos.row, focusPos.track, focusPos.type);
+             // Re-applying focus programmatically can cause issues, rely on browser focus
+        }
+
+        // Helper to get cell DOM element from position object
+        function getCellElement(row, track, type) {
+            return TRACKER_BODY.querySelector(`tr[data-row="${row}"] td[data-track="${track}"][data-type="${type}"]`);
+        }
+
+        // Helper to calculate overall column index (0=Tempo, 1=Ch1Note, 2=Ch1Inst...)
+        function getCellOverallIndex(row, track, type) {
+             if (type === 'tempo') return 0;
+             // Find index of type within the channel column types ('note', 'inst', 'vol', 'fx')
+             const typeIndex = COLUMN_TYPES.slice(1).indexOf(type);
+             if (typeIndex === -1) return -1; // Should not happen
+             // Calculate overall index: 1 (for tempo) + track * items_per_track + type_index
+             return 1 + track * 4 + typeIndex;
+        }
+        // Helper to get position {row, track, type} from overall column index
+         function getPosFromOverallIndex(rowIndex, overallIndex) {
+             if (overallIndex === 0) return { row: rowIndex, track: 0, type: 'tempo' };
+             if (overallIndex < 1) return null; // Invalid index
+
+             const channelItemsStartIndex = overallIndex - 1; // Index relative to start of channel items
+             const channelIndex = Math.floor(channelItemsStartIndex / 4); // Which channel
+             const typeIndexInChannel = channelItemsStartIndex % 4; // Which item within channel
+
+             if (channelIndex >= NUM_CHANNELS) return null; // Index out of bounds
+
+             const type = COLUMN_TYPES[1 + typeIndexInChannel]; // Get type ('note', 'inst', etc.)
+             return { row: rowIndex, track: channelIndex, type: type };
+         }
+
+
+        // Helper to get selection bounds (min/max row/col index)
+        function getSelectionBounds() {
+             if (!selectionStartPos || !selectionEndPos) return null;
+             // Calculate overall column indices for start and end points
+             const startColIdx = getCellOverallIndex(selectionStartPos.row, selectionStartPos.track, selectionStartPos.type);
+             const endColIdx = getCellOverallIndex(selectionEndPos.row, selectionEndPos.track, selectionEndPos.type);
+
+             // Determine min/max row and column index for the selection rectangle
+             return {
+                 minRow: Math.min(selectionStartPos.row, selectionEndPos.row),
+                 maxRow: Math.max(selectionStartPos.row, selectionEndPos.row),
+                 minColIdx: Math.min(startColIdx, endColIdx),
+                 maxColIdx: Math.max(startColIdx, endColIdx)
+             };
+        }
+
+        // --- Captured Value Display Update ---
+        function updateCapturedValueDisplay() {
+            CAPTURED_FREQ_DISPLAY.textContent = capturedFrequencyValue.toFixed(2);
+            CAPTURED_TEMPO_DISPLAY.textContent = capturedTempoValue.toFixed(1);
+        }
+
+        // --- Input Handling ---
+        function handleCellFocus(event) {
+             currentlyEditingCell = event.target;
+             // Update the global focus position state
+             focusPos = {
+                 row: parseInt(currentlyEditingCell.dataset.row),
+                 track: parseInt(currentlyEditingCell.dataset.track),
+                 type: currentlyEditingCell.dataset.type
+             };
+
+             // Reset selection if Shift key is NOT held down during focus event
+             if (!event.shiftKey) {
+                 selectionStartPos = { ...focusPos }; // Start selection at focused cell
+                 selectionEndPos = { ...focusPos };   // End selection at focused cell
+                 isSelecting = false; // Reset selecting flag
+             }
+             // If Shift *is* held, focusing extends the selection (handled implicitly by setting focusPos)
+             // The actual extension happens in keydown/mousedown, focus just sets the anchor if needed.
+
+             updateFocusAndSelectionStyles(); // Update visual feedback for focus/selection
+
+             // Select text content within the cell for easier editing, using timeout for reliability
+             setTimeout(() => {
+                if (document.activeElement === currentlyEditingCell) { // Check if still focused
+                    const selection = window.getSelection();
+                    // Check if selection object is valid and has expected methods
+                    if (selection && typeof selection.removeAllRanges === 'function' && typeof selection.addRange === 'function') {
+                        const range = document.createRange();
+                        range.selectNodeContents(currentlyEditingCell);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+            }, 0);
+        }
+
+        function handleCellBlur(event) {
+            // This function is called when a cell loses focus.
+            // We only want to save the data if the focus moves completely *outside*
+            // the editable cells of the tracker table. Navigation within the table
+            // (handled by keydown) should save data *before* moving focus.
+             if (currentlyEditingCell === event.target) {
+                  // Check if the element receiving focus now (`relatedTarget`) is outside the table's editable cells
+                 if (!event.relatedTarget || !event.relatedTarget.closest || !event.relatedTarget.closest('#tracker-table td[contenteditable="true"]')) {
+                     // If focus moved outside, finalize the data in the cell that lost focus
+                     updateCellData(currentlyEditingCell);
+                 }
+                 // Always clear the reference to the cell being edited when it loses focus
+                 currentlyEditingCell = null;
+             }
+             // We don't reset selection on blur, allowing selection to persist visually
+        }
+
+        function handleCellKeyDown(event) {
+             const cell = event.target; // The cell where the keydown happened
+             const startPos = { ...focusPos }; // Current focus position before any changes
+             let handled = false; // Flag to indicate if we processed the key event
+
+             // --- Spacebar: Capture Value ---
+             if (event.key === ' ') {
+                 event.preventDefault(); // Prevent typing a space
+                 handled = true; // We are handling this key
+
+                 if (focusPos.type === 'note') {
+                     // Get the effective frequency (considering continuation)
+                     const effectiveNote = getEffectiveValue(focusPos.row, focusPos.track, 'note');
+                     if (effectiveNote && effectiveNote.frequency !== null) {
+                         // Update the captured frequency state
+                         capturedFrequencyValue = effectiveNote.frequency;
+                         updateCapturedValueDisplay(); // Update the display on screen
+                         showMessage(`Captured Freq: ${capturedFrequencyValue.toFixed(2)} Hz`);
+                         flashCell(cell); // Provide visual feedback
+                     } else {
+                         showMessage("No frequency to capture in this cell.");
+                     }
+                 } else if (focusPos.type === 'tempo') {
+                     // Get the effective tempo (considering continuation)
+                     const effectiveTempo = getEffectiveValue(focusPos.row, 0, 'tempo'); // Tempo uses channel 0
+                     if (effectiveTempo !== null) {
+                         // Update the captured tempo state
+                         capturedTempoValue = effectiveTempo;
+                         updateCapturedValueDisplay(); // Update the display on screen
+                         showMessage(`Captured BPM: ${capturedTempoValue.toFixed(1)}`);
+                         flashCell(cell); // Provide visual feedback
+                     } else {
+                         showMessage("No BPM to capture in this cell.");
+                     }
+                 }
+             }
+             // --- Arrow Keys: Navigation & Selection ---
+             else if (event.key.startsWith('Arrow')) {
+                 event.preventDefault(); // Prevent default arrow key behavior (scrolling, etc.)
+                 handled = true; // We are handling this key
+
+                 // Finalize any edits in the current cell *before* navigating away
+                 updateCellData(cell);
+
+                 let nextPos = { ...focusPos }; // Start with current position
+                 const maxColIdx = getCellOverallIndex(0, NUM_CHANNELS - 1, 'fx'); // Calculate max column index
+
+                 // Calculate the next position based on the arrow key pressed
+                 if (event.key === 'ArrowUp') nextPos.row = (focusPos.row - 1 + NUM_ROWS) % NUM_ROWS;
+                 else if (event.key === 'ArrowDown') nextPos.row = (focusPos.row + 1) % NUM_ROWS;
+                 else if (event.key === 'ArrowLeft') {
+                     const currentIdx = getCellOverallIndex(focusPos.row, focusPos.track, focusPos.type);
+                     const nextIdx = (currentIdx - 1 + (maxColIdx + 1)) % (maxColIdx + 1); // Wrap around columns
+                     nextPos = getPosFromOverallIndex(focusPos.row, nextIdx); // Get {row, track, type} for the new index
+                 } else if (event.key === 'ArrowRight') {
+                     const currentIdx = getCellOverallIndex(focusPos.row, focusPos.track, focusPos.type);
+                     const nextIdx = (currentIdx + 1) % (maxColIdx + 1); // Wrap around columns
+                     nextPos = getPosFromOverallIndex(focusPos.row, nextIdx); // Get {row, track, type} for the new index
+                 }
+
+                 // Move focus to the calculated next cell
+                 const nextCell = getCellElement(nextPos.row, nextPos.track, nextPos.type);
+                 if (nextCell) {
+                     // Update selection range based on whether Shift key is held
+                     if (event.shiftKey) {
+                         selectionEndPos = { ...nextPos }; // Extend selection to the new position
+                         isSelecting = true; // Mark that selection is active
+                     } else {
+                         // If Shift is not held, reset selection to the new focus position
+                         selectionStartPos = { ...nextPos };
+                         selectionEndPos = { ...nextPos };
+                         isSelecting = false;
+                     }
+                     focusPos = { ...nextPos }; // Update the main focus position state
+                     nextCell.focus(); // Programmatically move the browser focus
+                     updateFocusAndSelectionStyles(); // Update visual highlights
+                 }
+             }
+             // --- Enter Key: Finalize Edit & Move Down ---
+             else if (event.key === 'Enter' && !event.shiftKey) { // Ignore Shift+Enter
+                 event.preventDefault(); // Prevent default Enter behavior (e.g., newline in contenteditable)
+                 handled = true; // We are handling this key
+
+                 // Finalize edits in the current cell
+                 updateCellData(cell);
+
+                 // Calculate position of the cell directly below
+                 let nextPos = { ...focusPos };
+                 nextPos.row = (focusPos.row + 1) % NUM_ROWS; // Move to next row, wrap around
+
+                 // Move focus to the cell below
+                 const nextCell = getCellElement(nextPos.row, nextPos.track, nextPos.type);
+                 if (nextCell) {
+                     // Reset selection when Enter is pressed
+                     selectionStartPos = { ...nextPos };
+                     selectionEndPos = { ...nextPos };
+                     focusPos = { ...nextPos }; // Update focus state
+                     nextCell.focus(); // Move browser focus
+                     updateFocusAndSelectionStyles(); // Update visuals
+                 }
+             }
+             // --- Escape Key: Cancel Edit & Blur ---
+             else if (event.key === 'Escape') {
+                  event.preventDefault(); // Prevent default Escape behavior
+                  handled = true; // We are handling this key
+
+                  // Restore the cell's text content to its value before editing started
+                  // (Uses the display value from the data model)
+                  cell.textContent = getCellDisplayValue(focusPos.row, focusPos.track, focusPos.type);
+                  // Optionally, clear the underlying input string if desired? No, just revert display.
+
+                  cell.blur(); // Remove focus from the cell
+
+                  // Reset selection to the current cell (even though it's blurred)
+                  selectionStartPos = { ...focusPos };
+                  selectionEndPos = { ...focusPos };
+                  updateFocusAndSelectionStyles(); // Update visuals (removes selection highlight)
+             }
+
+             // --- Delete/Backspace: Clear Selection --- (Placeholder for future implementation)
+             // else if (event.key === 'Delete' || event.key === 'Backspace') {
+             //     if (selectionStartPos && selectionEndPos && (selectionStartPos.row !== selectionEndPos.row || getCellOverallIndex(selectionStartPos...) !== getCellOverallIndex(selectionEndPos...))) {
+             //         event.preventDefault();
+             //         // TODO: Clear data and UI for all selected cells
+             //         showMessage("Clear Selection (Not Implemented)");
+             //         handled = true;
+             //     }
+             // }
+
+             // --- Global keys (Ctrl+C/V) are handled by the separate global listener ---
+
+             // If the key wasn't specifically handled above, allow the default browser behavior
+             // for contenteditable cells (e.g., typing characters, backspace within the cell).
+        }
+
+        // Helper function for visual feedback on capture
+        function flashCell(cell) {
+             cell.style.transition = 'background-color 0.1s ease-out';
+             cell.style.backgroundColor = '#FFFFFF'; // Flash white
+             // Reset style after a short delay
+             setTimeout(() => {
+                 cell.style.backgroundColor = '';
+                 cell.style.transition = '';
+             }, 100);
+        }
+
+        // --- Global Key Listener for Copy/Paste ---
+        document.addEventListener('keydown', handleGlobalKeyDown);
+        function handleGlobalKeyDown(event) {
+             // Check if focus is within the tracker table's editable cells
+             const isFocusInTracker = document.activeElement && document.activeElement.closest('#tracker-table td[contenteditable="true"]');
+
+             // Also check if an input field outside the table has focus
+             const isFocusInInput = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+
+             // Only handle C/V if focus is in the tracker and NOT in a config input
+             if (!isFocusInTracker || isFocusInInput) return;
+
+             // --- Ctrl+C (or Cmd+C on Mac) ---
+             if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+                 event.preventDefault(); // Prevent default copy action
+                 copySelectionToInternalBuffer(); // Copy selection to our buffer
+             }
+             // --- Ctrl+V (or Cmd+V on Mac) ---
+             else if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+                  event.preventDefault(); // Prevent default paste action
+                  pasteFromInternalBuffer(); // Paste from our buffer
+             }
+        }
+
+        // --- Internal Copy/Paste Implementation ---
+        function copySelectionToInternalBuffer() {
+            // Ensure there's a valid selection range
+            if (!selectionStartPos || !selectionEndPos) {
+                showMessage("No selection to copy.");
+                return;
+            }
+            const bounds = getSelectionBounds(); // Get min/max row/col indices
+            if (!bounds) return;
+
+            // Initialize the buffer object, storing the top-left anchor of the selection
+            copiedSelectionData = {
+                start: { ...selectionStartPos }, // Anchor point for relative pasting later
+                rows: [] // Array to hold rows of copied cell data
+            };
+
+            // Iterate through the selected rows
+            for (let r = bounds.minRow; r <= bounds.maxRow; r++) {
+                const rowData = []; // Data for the current row
+                // Iterate through the selected columns (using overall index)
+                for (let cIdx = bounds.minColIdx; cIdx <= bounds.maxColIdx; cIdx++) {
+                     const pos = getPosFromOverallIndex(r, cIdx); // Get {row, track, type} from index
+                     if (pos) {
+                         // Get the raw input string currently stored for this cell
+                         const displayValue = getCellDisplayValue(pos.row, pos.track, pos.type, true);
+                         // Store relevant info for pasting
+                         rowData.push({ track: pos.track, type: pos.type, value: displayValue });
+                     } else {
+                         rowData.push(null); // Placeholder if index is somehow invalid
+                     }
+                }
+                copiedSelectionData.rows.push(rowData); // Add row data to buffer
+            }
+            showMessage(`Copied ${copiedSelectionData.rows.length}x${copiedSelectionData.rows[0]?.length || 0} block.`);
+        }
+
+        function pasteFromInternalBuffer() {
+            // Check if there's data in the copy buffer
+            if (!copiedSelectionData || !copiedSelectionData.rows.length) {
+                 showMessage("Nothing in buffer to paste.");
+                 return;
+            }
+
+            const pasteStartPos = { ...focusPos }; // Paste starts at the current focus position
+            // Calculate the overall column index of the top-left cell for pasting
+            const startColIdx = getCellOverallIndex(pasteStartPos.row, pasteStartPos.track, pasteStartPos.type);
+
+            let updatedRows = new Set(); // Keep track of rows modified for potential UI refresh
+
+            // Iterate through the rows in the copied data buffer
+            copiedSelectionData.rows.forEach((rowData, rOffset) => {
+                const targetRow = (pasteStartPos.row + rOffset); // Calculate target row index
+                // Stop if pasting would go beyond the table's row limit
+                if (targetRow >= NUM_ROWS) return;
+
+                // Iterate through the cells in the current copied row
+                rowData.forEach((cellData, cOffset) => {
+                    if (!cellData) return; // Skip null placeholders
+
+                    // Calculate the target column index based on the paste start and relative offset
+                    // 1. Get overall index of the copied cell within its original selection block
+                    const sourceColIdx = getCellOverallIndex(0, cellData.track, cellData.type); // Use row 0 as reference
+                    // 2. Get overall index of the *anchor* cell where copying started
+                    const sourceStartColIdx = getCellOverallIndex(0, copiedSelectionData.start.track, copiedSelectionData.start.type);
+                    // 3. Find the column offset relative to the copy anchor
+                    const relativeColOffset = sourceColIdx - sourceStartColIdx;
+                    // 4. Calculate the target column index by applying this offset to the paste anchor
+                    const targetColIdx = startColIdx + relativeColOffset;
+
+                    // Convert the target overall column index back to {row, track, type}
+                    const targetPos = getPosFromOverallIndex(targetRow, targetColIdx);
+
+                    // Check if the target position is valid within the table bounds
+                    if (targetPos && targetPos.row < NUM_ROWS) {
+                        // Get the DOM element of the target cell
+                        const targetCell = getCellElement(targetPos.row, targetPos.track, targetPos.type);
+                        if (targetCell) {
+                            // Update the cell's text content visually with the copied value
+                            targetCell.textContent = cellData.value;
+                            // Update the underlying data model by processing the pasted value
+                            // This triggers parsing, calculation (if needed), and state updates
+                            updateCellData(targetCell);
+                            updatedRows.add(targetPos.row); // Mark row as updated
+                        }
+                    }
+                });
+            });
+
+            showMessage(`Pasted block.`);
+            // Optional: Could force a refresh of affected rows if needed, but updateCellData should handle visuals.
+            // updatedRows.forEach(r => updateTableRowUI(r));
+        }
+
+
+        // Helper to get the display value (raw input string) for a cell
+        function getCellDisplayValue(row, track, type, raw = true) { // raw=true is default
+             if (!patternData[row]) return '';
+             const data = patternData[row][track];
+             if (!data) return '';
+
+             // Return the raw input string stored in the data model
+             switch(type) {
+                 case 'tempo': return patternData[row][0].tempo.inputString; // Stored on channel 0
+                 case 'note': return data.note.inputString;
+                 case 'inst': return data.instrumentInputString || ''; // Show only explicit input
+                 case 'vol': return data.volumeInputString || ''; // Show only explicit input
+                 case 'fx': return data.effect.inputString || ''; // Show only explicit input
+                 default: return '';
+             }
+        }
+
+        // --- Update Cell Data (Core Logic - Refined Ratio Handling) ---
+        function updateCellData(cellElement) {
+            const row = parseInt(cellElement.dataset.row);
+            const track = parseInt(cellElement.dataset.track);
+            const type = cellElement.dataset.type;
+            // Get text content *at the time of update*, trimming whitespace
+            const inputText = cellElement.textContent.trim();
+
+            // Basic validation for row/track indices
+            if (row < 0 || row >= NUM_ROWS || track < 0 || track >= NUM_CHANNELS) return;
+
+            let data = patternData[row][track]; // Get reference to data object
+            let isValid = true; // Assume valid input initially
+            let finalDisplayValue = inputText; // What the cell should display after processing
+
+            switch(type) {
+                case 'tempo':
+                    data = patternData[row][0]; // Tempo data is on channel 0
+                    // Get the currently calculated tempo value *before* parsing new input
+                    const existingTempo = data.tempo.value;
+                    // Parse the new input text
+                    const tempoParseResult = parseTempoInput(inputText);
+
+                    // Store the raw input string regardless of validity
+                    data.tempo.inputString = inputText;
+
+                    if (tempoParseResult.type === 'bpm') {
+                        // Direct BPM entry
+                        data.tempo.value = tempoParseResult.value; // Store calculated BPM (or null if invalid range)
+                        if (data.tempo.value !== null) {
+                            // If valid BPM, update the captured value
+                            capturedTempoValue = data.tempo.value;
+                            updateCapturedValueDisplay();
+                        } else if (inputText) {
+                            // If input was provided but invalid range, mark as invalid
+                            isValid = false;
+                        }
+                    } else if (tempoParseResult.type === 'ratio') {
+                        // Ratio entry: Determine base value (existing cell value OR captured value)
+                        const baseTempo = (existingTempo !== null && existingTempo > 0) ? existingTempo : capturedTempoValue;
+                        if (baseTempo > 0) {
+                            // Calculate the new tempo
+                            const calculatedTempo = baseTempo * tempoParseResult.num / tempoParseResult.den;
+                            // Check if calculated tempo is within valid range
+                            if (calculatedTempo >= 30 && calculatedTempo <= 300) {
+                                data.tempo.value = calculatedTempo; // Store calculated value
+                                finalDisplayValue = calculatedTempo.toFixed(1); // Format for display
+                                data.tempo.inputString = finalDisplayValue; // Store calculated value as the new input string
+                                capturedTempoValue = calculatedTempo; // Update captured value
+                                updateCapturedValueDisplay();
+                                // Update the cell's visual text immediately
+                                cellElement.textContent = finalDisplayValue;
+                            } else {
+                                // Calculated value out of range
+                                isValid = false;
+                                data.tempo.value = null; // Clear internal value
+                            }
+                        } else {
+                            // Cannot calculate ratio if base is invalid
+                            isValid = false;
+                            data.tempo.value = null;
+                        }
+                    } else { // Invalid format or empty input
+                        data.tempo.value = null; // Clear internal value
+                        // Mark as invalid only if there was actual input text
+                        if (inputText) isValid = false;
+                    }
+                    break; // End tempo case
+
+                case 'note':
+                    // Get the currently calculated frequency *before* parsing new input
+                    const existingFreq = data.note.frequency;
+                    // Parse the new input text
+                    const noteParseResult = parseNoteInput(inputText);
+
+                    // Store the raw input string initially
+                    data.note.inputString = inputText;
+
+                    if (noteParseResult.type === 'hz') {
+                        // Direct frequency entry
+                        data.note.frequency = noteParseResult.frequency; // Store frequency (or null if invalid)
+                        if (data.note.frequency !== null) {
+                            // If valid frequency, update captured value
+                            capturedFrequencyValue = data.note.frequency;
+                            updateCapturedValueDisplay();
+                        } else if (inputText) {
+                            // If input was provided but invalid (e.g., "0"), mark invalid
+                            isValid = false;
+                        }
+                    } else if (noteParseResult.type === 'ratio') {
+                        // Ratio entry: Determine base value (existing cell value OR captured value)
+                        const baseFreq = (existingFreq !== null && existingFreq > 0) ? existingFreq : capturedFrequencyValue;
+                        if (baseFreq > 0) {
+                            // Calculate the new frequency
+                            const calculatedFreq = baseFreq * noteParseResult.num / noteParseResult.den;
+                            if (calculatedFreq > 0) {
+                                data.note.frequency = calculatedFreq; // Store calculated value
+                                finalDisplayValue = calculatedFreq.toFixed(2); // Format for display
+                                data.note.inputString = finalDisplayValue; // Store calculated value as the new input string
+                                capturedFrequencyValue = calculatedFreq; // Update captured value
+                                updateCapturedValueDisplay();
+                                // Update the cell's visual text immediately
+                                cellElement.textContent = finalDisplayValue;
+                            } else {
+                                // Calculated value invalid (e.g., results in 0 or negative)
+                                isValid = false;
+                                data.note.frequency = null;
+                            }
+                        } else {
+                            // Cannot calculate ratio if base is invalid
+                            isValid = false;
+                            data.note.frequency = null;
+                        }
+                    } else { // Invalid format or empty input
+                        data.note.frequency = null; // Clear internal value
+                        // Mark as invalid only if there was actual input text
+                        if (inputText) isValid = false;
+                    }
+                    break; // End note case
+
+                case 'inst':
+                    const cleanInst = inputText.toLowerCase();
+                    data.instrumentInputString = inputText; // Store raw input
+                    if (VALID_INSTRUMENTS.includes(cleanInst)) {
+                        data.instrument = cleanInst; // Update internal instrument type
+                    } else if (!inputText) {
+                        // If input is empty, reset internal value to default (playback uses continuation)
+                        data.instrument = DEFAULT_INSTRUMENT;
+                    } else {
+                        // Invalid instrument name entered
+                        isValid = false;
+                        // Keep the previous valid internal instrument value for continuation? Yes.
+                    }
+                    break; // End inst case
+
+                case 'vol':
+                    const volInt = parseInt(inputText, 10);
+                    data.volumeInputString = inputText; // Store raw input
+                    if (!isNaN(volInt) && volInt >= 0 && volInt <= 100) {
+                        // Valid volume entered, update internal value (0.0-1.0)
+                        data.volume = volInt / 100.0;
+                    } else if (!inputText) {
+                        // If input is empty, reset internal value to default
+                        data.volume = DEFAULT_VOLUME / 100.0;
+                    } else {
+                        // Invalid volume entered
+                        isValid = false;
+                        // Keep the previous valid internal volume value? Yes.
+                    }
+                    break; // End vol case
+
+                case 'fx':
+                    data.effect.inputString = inputText; // Store raw input
+                    if (inputText) {
+                        // Basic parsing example: first char is command, rest is value
+                        data.effect.command = inputText.substring(0, 1).toUpperCase();
+                        data.effect.value = inputText.substring(1);
+                        // TODO: Add validation based on command?
+                    } else {
+                        // If input is empty, clear internal effect data
+                        data.effect.command = null;
+                        data.effect.value = null;
+                    }
+                    break; // End fx case
+            }
+
+            // Apply visual feedback if the input was deemed invalid
+            if (!isValid) {
+                cellElement.style.backgroundColor = '#8B0000'; // Dark red flash
+                 // Remove the flash after a short delay
+                 setTimeout(() => { cellElement.style.backgroundColor = ''; }, 500);
+            }
+        }
+
+        // --- Input Parsing (Refined) ---
+        function parseNoteInput(inputStr) { // Returns { type: 'hz'|'ratio'|'invalid', frequency?, num?, den? }
+            inputStr = inputStr.trim();
+            if (!inputStr) return { type: 'invalid' }; // Empty is not a valid type here
+            // Check for direct frequency (number)
+            if (/^\d+(\.\d+)?$/.test(inputStr)) {
+                const f = parseFloat(inputStr);
+                // Return frequency if positive, otherwise null (invalid)
+                return { type: 'hz', frequency: f > 0 ? f : null };
+            }
+            // Check for ratio format (N:M)
+            const rM = inputStr.match(/^(\d+)\s*:\s*(\d+)$/);
+            if (rM) {
+                try {
+                    const n = parseInt(rM[1]);
+                    const d = parseInt(rM[2]);
+                    // Denominator must be positive, numerator non-negative
+                    if (d <= 0 || n < 0) return { type: 'invalid' };
+                    // Return components for calculation later
+                    return { type: 'ratio', num: n, den: d };
+                } catch (e) { return { type: 'invalid' }; } // Catch potential parseInt errors
+            }
+            // If neither format matches, it's invalid
+            return { type: 'invalid' };
+        }
+        function parseTempoInput(inputStr) { // Returns { type: 'bpm'|'ratio'|'invalid', value?, num?, den? }
+            inputStr = inputStr.trim();
+            if (!inputStr) return { type: 'invalid' };
+            // Check for direct BPM (number)
+            if (/^\d+(\.\d+)?$/.test(inputStr)) {
+                const b = parseFloat(inputStr);
+                // Return BPM value if within range, otherwise null (invalid)
+                return { type: 'bpm', value: (b >= 30 && b <= 300) ? b : null };
+            }
+            // Check for ratio format (N:M)
+            const rM = inputStr.match(/^(\d+)\s*:\s*(\d+)$/);
+            if (rM) {
+                try {
+                    const n = parseInt(rM[1]);
+                    const d = parseInt(rM[2]);
+                    // Denominator must be positive, numerator non-negative
+                    if (d <= 0 || n < 0) return { type: 'invalid' };
+                     // Return components for calculation later
+                    return { type: 'ratio', num: n, den: d };
+                } catch (e) { return { type: 'invalid' }; }
+            }
+             // If neither format matches, it's invalid
+            return { type: 'invalid' };
+        }
+
+
+        // --- Realtime Playback Logic (Phase Continuity) ---
+        function playStep() { /* ... no change needed for ratio logic here ... */ if(!isPlaying||!audioContext)return;const eT=getEffectiveTempo(currentPlayRow);const tD=getTickDurationSeconds(eT);const cT=audioContext.currentTime;document.querySelectorAll('.playing-row').forEach(r=>r.classList.remove('playing-row'));const rE=TRACKER_BODY.querySelector(`tr[data-row="${currentPlayRow}"]`);if(rE){rE.classList.add('playing-row');const r=rE.getBoundingClientRect();const cR=TRACKER_CONTAINER.getBoundingClientRect();if(r.top<cR.top||r.bottom>cR.bottom)rE.scrollIntoView({behavior:'smooth',block:'nearest'});}for(let c=0;c<NUM_CHANNELS;c++){const nD=getEffectiveValue(currentPlayRow,c,'note');const i=getEffectiveValue(currentPlayRow,c,'inst');const v=getEffectiveValue(currentPlayRow,c,'vol');const cF=(nD&&nD.frequency!==null)?nD.frequency:null;const cI=i||DEFAULT_INSTRUMENT;const wP=channelPlayingData[c];const iC=(cF!==null&&cF===wP.frequency&&cI===wP.instrument);if(channelOscillators[c]&&!iC){try{const gN=channelGains[c];if(gN){gN.gain.cancelScheduledValues(cT);gN.gain.setValueAtTime(gN.gain.value,cT);gN.gain.linearRampToValueAtTime(0,cT+0.01);}channelOscillators[c].stop(cT+0.02);channelOscillators[c].disconnect();}catch(e){}channelOscillators[c]=null;channelGains[c]=null;channelPlayingData[c]={frequency:null,instrument:null};}if(cF!==null&&cF>0&&v>0&&!iC){playFrequency(c,cF,cI,v,cT);channelPlayingData[c]={frequency:cF,instrument:cI};}else if(cF===null&&wP.frequency!==null){channelPlayingData[c]={frequency:null,instrument:null};}}currentPlayRow=(currentPlayRow+1)%NUM_ROWS;const nST=lastRowTime+tD;const delay=Math.max(0,nST-audioContext.currentTime);playbackIntervalId=setTimeout(playStep,delay*1000);lastRowTime=nST;}
+        function playFrequency(cI, f, iT, v, sT) { /* ... no change ... */ if(!audioContext||!masterGain||cI<0||cI>=NUM_CHANNELS)return;try{const o=audioContext.createOscillator(),mT=INSTRUMENT_MAP[iT]||'sine';o.type=mT;o.frequency.setValueAtTime(f,sT);const gN=audioContext.createGain();gN.gain.setValueAtTime(0,sT);gN.gain.linearRampToValueAtTime(v,sT+0.01);o.connect(gN);gN.connect(masterGain);o.start(sT);channelOscillators[cI]=o;channelGains[cI]=gN;}catch(e){console.error(`Error playing freq Ch${cI}:`,e);showMessage(`Error Ch${cI+1} sound`);} }
+        function startPlayback() { /* ... no change ... */ if(isPlaying)return;initAudio();if(!audioContext){showMessage("Audio Error: Cannot init AudioContext.");return;}if(audioContext.state==='suspended'){audioContext.resume();}isPlaying=true;currentPlayRow=focusPos.row;channelPlayingData=new Array(NUM_CHANNELS).fill({frequency:null,instrument:null});lastRowTime=audioContext.currentTime;PLAY_BUTTON.textContent='...';PLAY_BUTTON.disabled=true;STOP_BUTTON.disabled=false;console.log("Starting playback...");showMessage("Playing...");playStep();setTimeout(()=>{if(isPlaying)PLAY_BUTTON.textContent='Play';},100); }
+        function stopPlayback() { /* ... no change ... */ if(!isPlaying)return;isPlaying=false;clearTimeout(playbackIntervalId);playbackIntervalId=null;const now=audioContext?audioContext.currentTime:0;for(let c=0;c<NUM_CHANNELS;c++){if(channelOscillators[c]&&audioContext){try{const gN=channelGains[c];if(gN){gN.gain.cancelScheduledValues(now);gN.gain.setValueAtTime(gN.gain.value,now);gN.gain.linearRampToValueAtTime(0,now+0.05);}channelOscillators[c].stop(now+0.06);channelOscillators[c].disconnect();}catch(e){}}channelOscillators[c]=null;channelGains[c]=null;channelPlayingData[c]={frequency:null,instrument:null};}document.querySelectorAll('.playing-row').forEach(r=>r.classList.remove('playing-row'));PLAY_BUTTON.disabled=false;STOP_BUTTON.disabled=true;console.log("Playback stopped.");showMessage("Stopped."); }
+        function getEffectiveTempo(row) { /* ... no change ... */ const tD=getEffectiveValue(row,0,'tempo');return tD||(parseFloat(BASE_TEMPO_INPUT.value)||120); }
+        function getTickDurationSeconds(currentTempo) { /* ... no change ... */ const rPB=parseInt(ROWS_PER_BEAT_INPUT.value)||4;if(currentTempo<=0||rPB<=0)return 0.5;const bPS=currentTempo/60;const rPS=bPS*rPB;return 1.0/rPS; }
+
+
+        // --- JSON Export ---
+        function handleExportJson() { /* ... no change ... */ try{const jS=JSON.stringify(patternData,null,2);const b=new Blob([jS],{type:'application/json'});triggerDownload(b,"tracker_pattern.json");showMessage("Exported pattern data as JSON.");}catch(e){console.error("Error exporting JSON:",e);showMessage("Error exporting JSON.");} }
+        function triggerDownload(blob, filename) { /* ... no change ... */ const u=URL.createObjectURL(blob);const a=document.createElement('a');document.body.appendChild(a);a.style.display='none';a.href=u;a.download=filename;a.click();window.URL.revokeObjectURL(u);a.remove(); }
+
+        // --- WAV Export Logic ---
+        async function renderPatternToBuffer() { /* ... no change needed for ratio logic here ... */ showMessage("Rendering audio (Note: Continuity clicks may occur in export)...");await new Promise(r=>setTimeout(r,10));let tS=0;const rD=[];const bT=parseFloat(BASE_TEMPO_INPUT.value)||120;let cT=bT;for(let r=0;r<NUM_ROWS;r++){const tDa=getEffectiveValue(r,0,'tempo');cT=tDa||cT;const tDS=getTickDurationSeconds(cT);if(tDS<=0){showMessage("Error: Invalid tempo/rows.");return null;}const tSa=Math.floor(tDS*EXPORT_SAMPLE_RATE);rD.push(tSa);tS+=tSa;}const aB=new Float32Array(tS).fill(0);let cSO=0;let rCLF=new Array(NUM_CHANNELS).fill(parseFloat(BASE_FREQ_INPUT.value)||440.0);let rCP=new Array(NUM_CHANNELS).fill(0);for(let r=0;r<NUM_ROWS;r++){const tSa=rD[r];const rSTS=cSO;for(let c=0;c<NUM_CHANNELS;c++){const nD=getEffectiveValue(r,c,'note');const i=getEffectiveValue(r,c,'inst');const v=getEffectiveValue(r,c,'vol');let cF=null;if(nD&&nD.inputString){const pN=parseNoteInputForRender(nD.inputString,c,rCLF[c]);cF=pN.frequency;if(cF!==null){rCLF[c]=cF;}}else if(nD&&nD.frequency){cF=nD.frequency;rCLF[c]=cF;}if(cF!==null&&cF>0&&v>0){const mI=INSTRUMENT_MAP[i]||'sine';const gen=WAVEFORM_GENERATORS[mI];if(gen){const nS=gen(cF,tSa,EXPORT_SAMPLE_RATE,v,rCP[c]);for(let i=0;i<tSa;i++){const bI=rSTS+i;if(bI<tS){aB[bI]+=nS.samples[i];}}rCP[c]=nS.endPhase;}else{rCP[c]=0;}}else{rCP[c]=0;}}cSO+=tSa;}let mA=0;for(let i=0;i<tS;i++)mA=Math.max(mA,Math.abs(aB[i]));if(mA>1.0){const s=1.0/mA;for(let i=0;i<tS;i++)aB[i]*=s;console.log(`Normalized: Peak ${mA.toFixed(3)}`);}else if(mA===0)console.log("Warning: Rendered buffer silent.");else console.log(`Peak: ${mA.toFixed(3)}`);return aB;}
+        function parseNoteInputForRender(iS,cI,lF){ /* ... no change ... */ iS=iS.trim();if(!iS)return{frequency:null};if(/^\d+(\.\d+)?$/.test(iS)){const f=parseFloat(iS);return{frequency:f>0?f:null};}const rM=iS.match(/^(\d+)\s*:\s*(\d+)$/);if(rM){try{const n=parseInt(rM[1]),d=parseInt(rM[2]);if(d<=0||n<0)return{frequency:null};const b=lF||(parseFloat(BASE_FREQ_INPUT.value)||440.0);if(b<=0)return{frequency:null};const cF=b*n/d;return{frequency:cF>0?cF:null};}catch(e){return{frequency:null};}}return{frequency:null};}
+        function encodeWav(samples, sampleRate, bitDepth) { /* ... no change ... */ const bPS=bitDepth/8,nC=1,bA=nC*bPS,bR=sampleRate*bA,dS=samples.length*bPS,cS=36+dS,bf=new ArrayBuffer(44+dS),v=new DataView(bf);function wS(o,s){for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}wS(0,'RIFF');v.setUint32(4,cS,true);wS(8,'WAVE');wS(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,nC,true);v.setUint32(24,sampleRate,true);v.setUint32(28,bR,true);v.setUint16(32,bA,true);v.setUint16(34,bitDepth,true);wS(36,'data');v.setUint32(40,dS,true);let o=44;const m=Math.pow(2,bitDepth-1)-1;for(let i=0;i<samples.length;i++,o+=bPS){const s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(o,s*m,true);}return new Blob([bf],{type:'audio/wav'}); }
+        function triggerWavDownload(wavBlob, filename = "tracker_export.wav") { triggerDownload(wavBlob, filename); }
+        async function handleExportWav() { /* ... no change ... */ EXPORT_WAV_BUTTON.disabled=true;EXPORT_WAV_BUTTON.textContent='Exporting...';try{const aB=await renderPatternToBuffer();if(aB&&aB.length>0){const wB=encodeWav(aB,EXPORT_SAMPLE_RATE,EXPORT_BIT_DEPTH);triggerWavDownload(wB);}else if(aB){showMessage("Export failed: Pattern silent.");}else{showMessage("Export failed rendering.");}}catch(e){console.error("Error WAV export:",e);showMessage("Export failed. See console.");}finally{EXPORT_WAV_BUTTON.disabled=false;EXPORT_WAV_BUTTON.textContent='Export WAV';} }
+        function generateSine(f,dS,sR,a,sP=0){const b=new Float32Array(dS),w=2*Math.PI*f/sR;let p=sP;for(let i=0;i<dS;i++){b[i]=a*Math.sin(p);p+=w;}return{samples:b,endPhase:p%(2*Math.PI)};} function generateSquare(f,dS,sR,a,sP=0){const b=new Float32Array(dS),pS=sR/f,w=2*Math.PI*f/sR;let p=sP;for(let i=0;i<dS;i++){b[i]=a*(Math.sin(p)>=0?1:-1);p+=w;}return{samples:b,endPhase:p%(2*Math.PI)};} function generateSawtooth(f,dS,sR,a,sP=0){const b=new Float32Array(dS),pS=sR/f,w=2*Math.PI*f/sR;let p=sP/(2*Math.PI);for(let i=0;i<dS;i++){b[i]=a*(2*(p-Math.floor(0.5+p)));p+=(w/(2*Math.PI));}return{samples:b,endPhase:(p*2*Math.PI)%(2*Math.PI)};} function generateTriangle(f,dS,sR,a,sP=0){const b=new Float32Array(dS),pS=sR/f,w=2*Math.PI*f/sR;let p=sP;for(let i=0;i<dS;i++){b[i]=a*(2*Math.abs(2*(p/(2*Math.PI)-Math.floor(0.5+p/(2*Math.PI))))-1);p+=w;}return{samples:b,endPhase:p%(2*Math.PI)};}
+        const WAVEFORM_GENERATORS = { 'sine': generateSine, 'square': generateSquare, 'sawtooth': generateSawtooth, 'triangle': generateTriangle };
+
+
+        // --- Utility ---
+        let messageTimeout = null;
+        function showMessage(text, duration = 2500) { /* ... no change ... */ MESSAGE_BOX.textContent=text;MESSAGE_BOX.style.display='block';clearTimeout(messageTimeout);if(duration>0){messageTimeout=setTimeout(()=>{MESSAGE_BOX.style.display='none';},duration);} }
+
+        // --- Initialization ---
+        PLAY_BUTTON.addEventListener('click', startPlayback);
+        STOP_BUTTON.addEventListener('click', stopPlayback);
+        EXPORT_WAV_BUTTON.addEventListener('click', handleExportWav);
+        EXPORT_JSON_BUTTON.addEventListener('click', handleExportJson);
+        STOP_BUTTON.disabled = true;
+
+        // Add listeners for base config changes to update defaults/captured values
+        BASE_FREQ_INPUT.addEventListener('change', () => {
+            const newBase = parseFloat(BASE_FREQ_INPUT.value) || 440.0;
+            // Optionally update captured value if it was still the default? Or just let user manage it?
+             // capturedFrequencyValue = newBase; // Example: Force update capture on base change
+             // updateCapturedValueDisplay();
+             showMessage(`Base Frequency updated to ${newBase} Hz`);
+        });
+         BASE_TEMPO_INPUT.addEventListener('change', () => {
+             const newBase = parseFloat(BASE_TEMPO_INPUT.value) || 120.0;
+             // capturedTempoValue = newBase; // Example: Force update capture on base change
+             // updateCapturedValueDisplay();
+             showMessage(`Base Tempo updated to ${newBase} BPM`);
+         });
+
+
+        initializePatternData(); // Initializes pattern and captured values
+        generateTrackerTable();
+        console.log("Tracker initialized.");
+        showMessage("Tracker Ready.", 3000);
+
+    </script>
+
+</body>
+</html>

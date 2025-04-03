@@ -102,19 +102,39 @@ initSDL filePath = do
   renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
   
   -- Load font (try system fonts first, then fall back to default)
-  font <- (Font.load "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf" fontSize)
-      `catch` \(_ :: SomeException) -> 
-          (Font.load "/usr/share/fonts/TTF/DejaVuSansMono.ttf" fontSize)
-      `catch` \(_ :: SomeException) -> 
-          (Font.load "C:/Windows/Fonts/consola.ttf" fontSize)
-      `catch` \(_ :: SomeException) -> do
+  putStrLn "Loading font..."
+  fontAttempts <- sequence [
+      -- Linux paths
+      (Font.load "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf" fontSize) `catch` \(_ :: SomeException) -> return Nothing,
+      (Font.load "/usr/share/fonts/TTF/DejaVuSansMono.ttf" fontSize) `catch` \(_ :: SomeException) -> return Nothing,
+      -- Windows paths
+      (Font.load "C:/Windows/Fonts/consola.ttf" fontSize) `catch` \(_ :: SomeException) -> return Nothing,
+      (Font.load "C:/Windows/Fonts/cour.ttf" fontSize) `catch` \(_ :: SomeException) -> return Nothing,
+      -- macOS paths
+      (Font.load "/Library/Fonts/Courier New.ttf" fontSize) `catch` \(_ :: SomeException) -> return Nothing,
+      (Font.load "/System/Library/Fonts/Monaco.ttf" fontSize) `catch` \(_ :: SomeException) -> return Nothing
+    ]
+  
+  -- Try to find a successful font load
+  let availableFonts = [font | Just font <- fontAttempts]
+  font <- if null availableFonts
+      then do
           putStrLn "Warning: Could not load preferred monospace font"
-          putStrLn "Attempting to use any available font..."
-          Font.initialize
-          let availableFonts = [] -- In a real app, we'd list available fonts
-          if null availableFonts
-              then error "No fonts available. Cannot continue."
-              else Font.load (head availableFonts) fontSize
+          putStrLn "Attempting to use default font..."
+          -- Try some common default fonts
+          (Font.load "/usr/share/fonts/truetype/freefont/FreeMono.ttf" fontSize) `catch` \(_ :: SomeException) -> do
+              putStrLn "Warning: Couldn't load FreeMono font."
+              -- Final fallback - this should be available on most systems with SDL_ttf
+              putStrLn "Trying final fallback font..."
+              (Font.load "/usr/share/fonts/liberation/LiberationMono-Regular.ttf" fontSize) `catch` \(_ :: SomeException) -> do
+                  putStrLn "ERROR: No usable fonts found!"
+                  putStrLn "You may need to install SDL2_ttf and some TTF fonts."
+                  putStrLn "Press Enter to continue..."
+                  _ <- getLine
+                  error "No usable fonts found. Cannot continue."
+      else do
+          putStrLn "Successfully loaded font."
+          return (head availableFonts)
   
   -- Load tracker file
   tfRef <- case filePath of
@@ -163,7 +183,9 @@ cleanupSDL ui = do
 -- | Draw text with specified color
 drawText :: TrackerUI -> String -> (CInt, CInt) -> V4 Word8 -> IO ()
 drawText ui text (x, y) color = do
-  surface <- Font.blended (uiFont ui) color (T.pack text)
+  -- Check if text is empty and substitute a space if it is
+  let safeText = if null text then " " else text
+  surface <- Font.blended (uiFont ui) color (T.pack safeText)
   texture <- SDL.createTextureFromSurface (uiRenderer ui) surface
   SDL.freeSurface surface
   

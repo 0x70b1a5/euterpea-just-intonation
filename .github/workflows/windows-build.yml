@@ -33,19 +33,27 @@ jobs:
         curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5-win32-x64.zip -o SDL2.zip
         Expand-Archive -Path SDL2.zip -DestinationPath C:/SDL2_temp -Force
         
-        # Move SDL2 files to the correct structure
-        copy C:/SDL2_temp/SDL2-2.28.5/lib/x64/*.dll C:/SDL2/lib/x64/
-        copy C:/SDL2_temp/SDL2-2.28.5/lib/x64/*.lib C:/SDL2/lib/x64/
-        copy C:/SDL2_temp/SDL2-2.28.5/include/*.h C:/SDL2/include/
+        # List the extracted content to see structure
+        dir C:/SDL2_temp -Recurse | Select-Object FullName | Out-File -FilePath SDL2_structure.txt
+        Get-Content SDL2_structure.txt
+        
+        # Move SDL2 files to the correct structure (adjusting paths based on actual structure)
+        copy C:/SDL2_temp/*.dll C:/SDL2/lib/x64/
+        copy C:/SDL2_temp/*.lib C:/SDL2/lib/x64/
+        copy C:/SDL2_temp/include/*.h C:/SDL2/include/
         
         # Download and extract SDL2_ttf
         curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2-win32-x64.zip -o SDL2_ttf.zip
         Expand-Archive -Path SDL2_ttf.zip -DestinationPath C:/SDL2_ttf_temp -Force
         
-        # Move SDL2_ttf files to the correct structure
-        copy C:/SDL2_ttf_temp/SDL2_ttf-2.20.2/lib/x64/*.dll C:/SDL2/lib/x64/
-        copy C:/SDL2_ttf_temp/SDL2_ttf-2.20.2/lib/x64/*.lib C:/SDL2/lib/x64/ 
-        copy C:/SDL2_ttf_temp/SDL2_ttf-2.20.2/include/*.h C:/SDL2/include/
+        # List the extracted content to see structure
+        dir C:/SDL2_ttf_temp -Recurse | Select-Object FullName | Out-File -FilePath SDL2_ttf_structure.txt
+        Get-Content SDL2_ttf_structure.txt
+        
+        # Move SDL2_ttf files to the correct structure (adjusting paths based on actual structure)
+        copy C:/SDL2_ttf_temp/*.dll C:/SDL2/lib/x64/
+        copy C:/SDL2_ttf_temp/*.lib C:/SDL2/lib/x64/ 
+        copy C:/SDL2_ttf_temp/include/*.h C:/SDL2/include/
         
         # Check SDL directory structure
         dir C:/SDL2

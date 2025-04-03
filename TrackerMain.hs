@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE CPP #-}
 
 module TrackerMain where
 
@@ -13,9 +12,6 @@ import Euterpea
 import System.Console.ANSI
 import System.Exit (exitSuccess, ExitCode(ExitSuccess))
 import Control.Exception (catch, SomeException, throwIO)
-#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
-import System.Posix.Signals (installHandler, Handler(Catch), sigINT)
-#endif
 import System.Process (system)
 import System.IO.Temp (withSystemTempFile)
 -- Use JustIntonationCore instead of Main
@@ -207,7 +203,6 @@ data TrackerState = TrackerState {
   capturedFreq :: Double,      -- ^ Captured frequency value
   capturedTempo :: Double,     -- ^ Captured tempo value
   filePath :: Maybe FilePath,  -- ^ Current file path
-  sigintHandler :: Maybe Handler, -- ^ Original SIGINT handler to restore
   bottomBarExpanded :: Bool    -- ^ Whether bottom help bar is expanded
 }
 
@@ -233,7 +228,6 @@ initTrackerState tf path = TrackerState {
   capturedFreq = baseFrequency tf,
   capturedTempo = baseTempo tf,
   filePath = path,
-  sigintHandler = Nothing,
   bottomBarExpanded = False  -- Start with collapsed bottom bar
 }
 
@@ -293,7 +287,7 @@ drawTrackerGrid state = do
       setSGR [SetColor Foreground Vivid Cyan, SetColor Background Dull Black]
       putStrLn $ " [↑,↓,←,→]: Navigate | [Enter]: Edit | [Esc]: Cancel | [S]: Save | [E]: Export | [Space]: Play "
       setCursorPosition (rows + 7) 0
-      putStrLn $ " [Q]: Quit | [?]: Help | [A]: Add Row | [D]: Delete Row | [Shift+Arrows]: Select | [C/Ctrl+C]: Copy | [V/Ctrl+V]: Paste "
+      putStrLn $ " [Q]: Quit | [?]: Help | [A]: Add Row | [D]: Delete Row | [Shift+Arrows]: Select | [C]: Copy/Capture | [V]: Paste "
       setCursorPosition (rows + 8) 0
       putStrLn $ " [T,N,I,V,F]: Jump to Field Types (Tempo, Note, Instrument, Volume, Effects) | [C] (no selection): Capture "
       setCursorPosition (rows + 9) 0
@@ -765,7 +759,7 @@ handleNavigationModeInput state c =
         then copySelection state    -- If there's a selection, use 'c' for copy
         else captureValue state     -- Otherwise use 'c' for capture
       
-    'v' -> -- Alt shortcut for paste
+    'v' -> -- Shortcut for paste
       pasteSelection state
       
     'a' -> -- Add row at current position
@@ -773,15 +767,6 @@ handleNavigationModeInput state c =
     
     'd' -> -- Delete current row
       deleteRow state
-      
-    -- Original copy/paste operations (still supported)
-    -- Handle Ctrl+C
-    '\ETX' -> -- Ctrl+C (ETX is ASCII 3)
-      copySelection state
-      
-    -- Handle Ctrl+V
-    '\SYN' -> -- Ctrl+V (SYN is ASCII 22)
-      pasteSelection state
     
     -- Arrow keys navigation (special handling for escape sequences)
     '\ESC' -> do
@@ -1422,8 +1407,8 @@ showHelp state = do
   putStrLn ""
   putStrLn "Selection and Clipboard:"
   putStrLn "  Shift+Arrow keys - Select multiple cells"
-  putStrLn "  Ctrl+C or c (with selection) - Copy selected cells"
-  putStrLn "  Ctrl+V or v - Paste copied cells at cursor position"
+  putStrLn "  c (with selection) - Copy selected cells"
+  putStrLn "  v - Paste copied cells at cursor position"
   putStrLn "  c (without selection) - Capture frequency/tempo value"
   putStrLn "  / - Toggle help bar expansion"
   putStrLn "  Spacebar - Play audio preview of current tracker content"
@@ -1451,14 +1436,7 @@ exitTracker state = do
   
   c <- getChar
   if c == 'y' || c == 'Y'
-    then do
-#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
-      -- Restore the original SIGINT handler before returning to menu
-      case sigintHandler state of
-        Just handler -> installHandler sigINT handler Nothing >> return ()
-        Nothing -> return ()
-#endif
-      trackerMenu  -- Return to main menu
+    then trackerMenu  -- Return to main menu
     else trackerLoop state  -- Continue tracking
 
 -- | Main tracker loop
@@ -1477,21 +1455,8 @@ openTerminalTracker tf path = do
   hSetBuffering stdin NoBuffering  -- Read one char at a time
   hSetEcho stdin False             -- Don't echo input
   
-#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
-  -- Install a custom SIGINT handler for Ctrl+C to be used for copying
-  -- Store the old handler to restore it later
-  oldHandler <- installHandler sigINT (Catch $ do
-    -- Instead of terminating, we'll use a special character to trigger the copy operation
-    -- This allows Ctrl+C to work for copying without terminating the program
-    putChar '\ETX'
-    return ()) Nothing
-    
-  -- Initialize the tracker state with the original handler saved
-  let initialState = (initTrackerState tf path) { sigintHandler = Just oldHandler }
-#else
-  -- On Windows, we don't need the SIGINT handler
+  -- Initialize the tracker state
   let initialState = initTrackerState tf path
-#endif
   
   -- Start the tracker loop
   (trackerLoop initialState `catch` (\(e :: SomeException) -> do
@@ -1504,12 +1469,6 @@ openTerminalTracker tf path = do
     putStrLn $ "Error: " ++ show e
     putStrLn "Press Enter to continue..."
     _ <- getLine
-#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
-    -- Restore the original SIGINT handler before returning to menu
-    case sigintHandler initialState of
-      Just handler -> installHandler sigINT handler Nothing >> return ()
-      Nothing -> return ()
-#endif
     trackerMenu))
 
 -- | Add tracker functionality to the main menu

@@ -11,27 +11,47 @@ The simplest and most reliable approach is to build directly on Windows:
    - Choose to install GHC and Cabal during setup
    - Make sure to let the installer add GHC to your PATH
 
-2. Install required dependencies:
+2. Install MSYS2 for SDL libraries:
+   - Download and install MSYS2 from https://www.msys2.org/
+   - Open MSYS2 MinGW 64-bit terminal and run:
+   ```
+   pacman -Syu
+   pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
+   ```
+   - Add C:\msys64\mingw64\bin to your PATH environment variable
+
+3. Install required Haskell dependencies:
    ```
    cabal update
-   cabal install --lib Euterpea
    cabal install --lib UISF
    cabal install --lib HSoM
    ```
 
-3. Clone or copy this project to the Windows machine
+4. Clone or copy this project to the Windows machine
 
-4. Build the project:
+5. Build the project:
    ```
    cabal build
    ```
 
-5. Create the executable:
+6. Create the executable:
    ```
    cabal install --installdir=dist\windows exe:euterpea2-project
    ```
 
-6. The executable will be in `dist\windows\euterpea2-project.exe` - you can rename it to `JustIntonationMusic.exe`
+7. The executable will be in `dist\windows\euterpea2-project.exe` - you can rename it to `JustIntonationMusic.exe`
+
+8. Copy required DLL files to the same directory as the executable:
+   ```
+   copy C:\msys64\mingw64\bin\SDL2.dll dist\windows\
+   copy C:\msys64\mingw64\bin\SDL2_ttf.dll dist\windows\
+   copy C:\msys64\mingw64\bin\libfreetype-6.dll dist\windows\
+   copy C:\msys64\mingw64\bin\zlib1.dll dist\windows\
+   copy C:\msys64\mingw64\bin\libpng16-16.dll dist\windows\
+   copy C:\msys64\mingw64\bin\libbz2-1.dll dist\windows\
+   copy C:\msys64\mingw64\bin\libbrotlidec.dll dist\windows\
+   copy C:\msys64\mingw64\bin\libbrotlicommon.dll dist\windows\
+   ```
 
 ## Option 2: Cross-compiling from Linux
 
@@ -123,25 +143,54 @@ You can use GitHub Actions to easily build Windows executables without needing W
        - name: Update Cabal package list
          run: cabal update
        
+       - name: Set up MSYS2
+         uses: msys2/setup-msys2@v2
+         with:
+           msystem: MINGW64
+           update: true
+           install: mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
+           path-type: inherit
+       
        - name: Install dependencies
+         env:
+           PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
+           PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
          run: |
-           cabal install --lib Euterpea
            cabal install --lib UISF
            cabal install --lib HSoM
        
        - name: Build
+         env:
+           PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
+           PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
          run: cabal build
        
        - name: Create executable directory
-         run: mkdir -p dist/windows
+         run: |
+           mkdir dist 2>nul || echo "dist already exists"
+           mkdir dist\windows 2>nul || echo "dist\windows already exists"
        
        - name: Install executable
+         env:
+           PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
+           PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
          run: cabal install --installdir=dist/windows exe:euterpea2-project
        
        - name: Rename executable
          run: |
            cd dist/windows
            ren euterpea2-project.exe JustIntonationMusic.exe
+       
+       - name: Copy DLL dependencies
+         run: |
+           copy C:\msys64\mingw64\bin\SDL2.dll dist\windows\
+           copy C:\msys64\mingw64\bin\SDL2_ttf.dll dist\windows\
+           copy C:\msys64\mingw64\bin\libfreetype-6.dll dist\windows\
+           copy C:\msys64\mingw64\bin\zlib1.dll dist\windows\
+           copy C:\msys64\mingw64\bin\libpng16-16.dll dist\windows\
+           copy C:\msys64\mingw64\bin\libbz2-1.dll dist\windows\
+           copy C:\msys64\mingw64\bin\libbrotlidec.dll dist\windows\
+           copy C:\msys64\mingw64\bin\libbrotlicommon.dll dist\windows\
        
        - name: Copy README
          run: copy WINDOWS_README.md dist/windows/README.md
@@ -167,10 +216,19 @@ For your friend:
 1. Create a ZIP file containing:
    - The executable (JustIntonationMusic.exe)
    - The WINDOWS_README.md file (rename to README.md)
+   - Required SDL2 DLLs (from the artifacts created by GitHub Actions):
+     - SDL2.dll
+     - SDL2_ttf.dll
+     - libfreetype-6.dll
+     - zlib1.dll
+     - libpng16-16.dll
+     - libbz2-1.dll
+     - libbrotlidec.dll
+     - libbrotlicommon.dll
    
 2. Optional additions:
    - Example WAV files
-   - Any DLLs required for Windows (may be needed for audio)
+   - Additional font files (if using custom fonts)
 
 ## Testing on Windows
 

@@ -22,24 +22,54 @@ jobs:
     - name: Update Cabal package list
       run: cabal update
     
+    - name: Set up MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
+        path-type: inherit
+    
     - name: Install dependencies
+      env:
+        PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
+        PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
       run: |
         cabal install --lib UISF
         cabal install --lib HSoM
     
     - name: Build
+      env:
+        PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
+        PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
       run: cabal build
     
     - name: Create executable directory
-      run: mkdir -p dist/windows
+      run: |
+        mkdir dist 2>nul || echo "dist already exists"
+        mkdir dist\windows 2>nul || echo "dist\windows already exists"
     
     - name: Install executable
+      env:
+        PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
+        PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
       run: cabal install --installdir=dist/windows exe:euterpea2-project
     
     - name: Rename executable
       run: |
         cd dist/windows
         ren euterpea2-project.exe JustIntonationMusic.exe
+    
+    - name: Copy DLL dependencies
+      run: |
+        copy C:\msys64\mingw64\bin\SDL2.dll dist\windows\
+        copy C:\msys64\mingw64\bin\SDL2_ttf.dll dist\windows\
+        copy C:\msys64\mingw64\bin\libfreetype-6.dll dist\windows\
+        copy C:\msys64\mingw64\bin\zlib1.dll dist\windows\
+        copy C:\msys64\mingw64\bin\libpng16-16.dll dist\windows\
+        copy C:\msys64\mingw64\bin\libbz2-1.dll dist\windows\
+        copy C:\msys64\mingw64\bin\libbrotlidec.dll dist\windows\
+        copy C:\msys64\mingw64\bin\libbrotlicommon.dll dist\windows\
     
     - name: Copy README
       run: copy WINDOWS_README.md dist/windows/README.md

@@ -54,6 +54,11 @@ If you encounter any issues:
 1. Make sure your audio is working (try playing another sound file)
 2. Check that the WAV files were created in the same folder as the program
 3. Try running the program as administrator if you have permission issues
-4. Contact your friend who provided this program for additional help
+4. If you get missing DLL errors, make sure all the included SDL2.dll and other DLL files are in the same folder as the executable
+5. Contact your friend who provided this program for additional help
+
+## Technical Notes
+
+This program uses the SDL2 library for its user interface. All required DLL files are included in the distribution package.
 
 Enjoy making music with Just Intonation!

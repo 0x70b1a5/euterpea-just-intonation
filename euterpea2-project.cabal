@@ -25,6 +25,8 @@ executable euterpea2-project
                       TrackerMain,
                       TrackerSDL,
                       ErrorHandler
+    -- Exclude unused web interface
+    -- other-modules:    TrackerWeb
     build-depends:    base ^>=4.12.0.0,
                       Euterpea,
                       HSoM,
@@ -42,6 +44,7 @@ executable euterpea2-project
                       time,
                       vector,
                       containers,
-                      linear
+                      linear,
+                      StateVar
     hs-source-dirs:   .
     default-language: Haskell2010

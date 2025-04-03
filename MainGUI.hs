@@ -9,6 +9,9 @@ import Euterpea
 import JustIntonationCore
 import qualified Main
 import qualified TrackerMain
+import qualified TrackerSDL
+import ErrorHandler
+import Control.Exception (catch, SomeException)
 
 -- Just Intonation constants
 -- Helper to create a just pitch from a base frequency and ratio
@@ -41,7 +44,11 @@ unison = 1 % 1
 
 -- | A very simple terminal-based UI for non-technical users
 mainGUI :: IO ()
-mainGUI = do
+mainGUI = withErrorHandling $ mainGUIWithErrorHandling
+
+-- Implementation with error handling
+mainGUIWithErrorHandling :: IO ()
+mainGUIWithErrorHandling = do
   clearScreen
   currentDir <- getCurrentDirectory
   
@@ -55,10 +62,11 @@ mainGUI = do
   putStrLn "2. Generate Major Arpeggio"
   putStrLn "3. Generate Minor Arpeggio"
   putStrLn "4. Generate Just Scale" 
-  putStrLn "5. Open Tracker Interface"
-  putStrLn "6. Exit"
+  putStrLn "5. Open Terminal Tracker Interface"
+  putStrLn "6. Open SDL Tracker Interface"
+  putStrLn "7. Exit"
   putStrLn "========================================"
-  putStrLn "Enter your choice (1-6): "
+  putStrLn "Enter your choice (1-7): "
   
   choice <- getLine
   case choice of
@@ -74,7 +82,7 @@ mainGUI = do
       writeJustWav "just_melody.wav" 4.0 justMelody
       putStrLn "Created just_melody.wav in the current directory."
       waitForKeypress
-      mainGUI
+      mainGUIWithErrorHandling
     
     "2" -> do
       putStrLn "Creating major arpeggio..."
@@ -90,7 +98,7 @@ mainGUI = do
       writeJustWav "major_arpeggio.wav" 4.0 majorArpeggio
       putStrLn "Created major_arpeggio.wav in the current directory."
       waitForKeypress
-      mainGUI
+      mainGUIWithErrorHandling
     
     "3" -> do
       putStrLn "Creating minor arpeggio..."
@@ -106,7 +114,7 @@ mainGUI = do
       writeJustWav "minor_arpeggio.wav" 4.0 minorArpeggio
       putStrLn "Created minor_arpeggio.wav in the current directory."
       waitForKeypress
-      mainGUI
+      mainGUIWithErrorHandling
     
     "4" -> do
       putStrLn "Creating just scale..."
@@ -123,22 +131,28 @@ mainGUI = do
       writeJustWav "just_scale.wav" 4.0 justScale
       putStrLn "Created just_scale.wav in the current directory."
       waitForKeypress
-      mainGUI
+      mainGUIWithErrorHandling
     
     "5" -> do
-      putStrLn "Opening Tracker interface..."
+      putStrLn "Opening Terminal Tracker interface..."
       TrackerMain.trackerMenu
       waitForKeypress
-      mainGUI
-      
+      mainGUIWithErrorHandling
+    
     "6" -> do
+      putStrLn "Opening SDL Tracker interface..."
+      TrackerSDL.startSDLTracker Nothing
+      waitForKeypress
+      mainGUIWithErrorHandling
+      
+    "7" -> do
       putStrLn "Thank you for using Just Intonation Music Generator!"
       exitSuccess
     
     _ -> do
       putStrLn "Invalid choice. Please try again."
       waitForKeypress
-      mainGUI
+      mainGUIWithErrorHandling
 
 -- | Clear the screen
 clearScreen :: IO ()

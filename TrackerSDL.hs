@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NondecreasingIndentation #-}
 
 module TrackerSDL (startSDLTracker) where
 
@@ -17,11 +18,14 @@ import Foreign.C.Types (CInt)
 -- SDL imports
 import qualified SDL
 import qualified SDL.Font as Font
-import qualified SDL.TTF as TTF
 import SDL.Vect (V2(..), V4(..))
-import SDL.Video.Renderer (Rectangle(..), Point(P))
-import SDL.Internal.Numbered (($=))
+import SDL.Video (Renderer, Window, Texture)
+import SDL.Video.Renderer (Rectangle(..))
+import Linear.Affine (Point(P))
+import Foreign.C.Types (CInt)
+import Data.Word (Word8)
 import qualified Data.Text as T
+import Data.StateVar (($=))
 
 -- Import project modules
 import TrackerTypes
@@ -29,7 +33,7 @@ import TrackerParser
 import ErrorHandler
 
 -- | SDL UI colors
-colors :: Map.Map String (V4 CInt)
+colors :: Map.Map String (V4 Word8)
 colors = Map.fromList
   [ ("background", V4 0 0 128 255)       -- Dark blue background
   , ("text", V4 192 192 192 255)         -- Light gray text
@@ -46,8 +50,12 @@ colors = Map.fromList
   ]
 
 -- | Get a color from the map with default fallback
-getColor :: String -> V4 CInt
+getColor :: String -> V4 Word8
 getColor name = fromMaybe (V4 255 255 255 255) (Map.lookup name colors)
+
+-- | Convert V4 Word8 to V4 CInt (for functions that need CInt colors)
+toCIntColor :: V4 Word8 -> V4 CInt
+toCIntColor (V4 r g b a) = V4 (fromIntegral r) (fromIntegral g) (fromIntegral b) (fromIntegral a)
 
 -- | SDL UI size constants
 screenWidth, screenHeight :: CInt
@@ -83,7 +91,7 @@ data TrackerUI = TrackerUI
 initSDL :: Maybe FilePath -> IO TrackerUI
 initSDL filePath = do
   SDL.initialize [SDL.InitVideo]
-  TTF.initialize
+  Font.initialize
   
   -- Create window
   window <- SDL.createWindow "Just Intonation Tracker" SDL.defaultWindow
@@ -149,11 +157,11 @@ cleanupSDL ui = do
   Font.free (uiFont ui)
   SDL.destroyRenderer (uiRenderer ui)
   SDL.destroyWindow (uiWindow ui)
-  TTF.quit
+  Font.quit
   SDL.quit
 
 -- | Draw text with specified color
-drawText :: TrackerUI -> String -> (CInt, CInt) -> V4 CInt -> IO ()
+drawText :: TrackerUI -> String -> (CInt, CInt) -> V4 Word8 -> IO ()
 drawText ui text (x, y) color = do
   surface <- Font.blended (uiFont ui) color (T.pack text)
   texture <- SDL.createTextureFromSurface (uiRenderer ui) surface
@@ -163,8 +171,8 @@ drawText ui text (x, y) color = do
   FontInfo { textureWidth = w, textureHeight = h } <- queryFont texture
   
   -- Render the text
-  let src = SDL.Rectangle (SDL.P (SDL.V2 0 0)) (SDL.V2 w h)
-      dst = SDL.Rectangle (SDL.P (SDL.V2 x y)) (SDL.V2 w h)
+  let src = SDL.Rectangle (P (SDL.V2 0 0)) (SDL.V2 w h)
+      dst = SDL.Rectangle (P (SDL.V2 x y)) (SDL.V2 w h)
   SDL.copy (uiRenderer ui) texture (Just src) (Just dst)
   
   -- Clean up
@@ -182,16 +190,18 @@ queryFont texture = do
   return FontInfo { textureWidth = w, textureHeight = h }
 
 -- | Draw a rectangle
-drawRect :: TrackerUI -> SDL.Rectangle CInt -> V4 CInt -> IO ()
+drawRect :: TrackerUI -> SDL.Rectangle CInt -> V4 Word8 -> IO ()
 drawRect ui rect color = do
-  SDL.rendererDrawColor (uiRenderer ui) $= color
-  SDL.fillRect (uiRenderer ui) (Just rect)
+    -- Set the renderer color
+    SDL.rendererDrawColor (uiRenderer ui) $= color
+    -- Draw the rectangle
+    SDL.fillRect (uiRenderer ui) (Just rect)
 
 -- | Draw the header row
 drawHeader :: TrackerUI -> IO ()
 drawHeader ui = do
   -- Background for header
-  drawRect ui (SDL.Rectangle (SDL.P (SDL.V2 0 0)) (SDL.V2 screenWidth cellHeight)) (getColor "row_even")
+  drawRect ui (SDL.Rectangle (P (SDL.V2 0 0)) (SDL.V2 screenWidth cellHeight)) (getColor "row_even")
   
   -- Column headers
   let headerColor = getColor "header"
@@ -223,7 +233,7 @@ drawTrackerRow ui rowData rowIdx scrollOffset isCurrentRow = do
                           else getColor "row_odd"
     
     -- Draw row background
-    drawRect ui (SDL.Rectangle (SDL.P (SDL.V2 0 y)) (SDL.V2 screenWidth cellHeight)) rowBgColor
+    drawRect ui (SDL.Rectangle (P (SDL.V2 0 y)) (SDL.V2 screenWidth cellHeight)) rowBgColor
     
     -- Draw row number
     drawText ui (show rowIdx) (10, y + 3) (getColor "text")
@@ -293,7 +303,7 @@ drawSelection ui = do
                          then getColor "selected" 
                          else V4 100 100 150 100
     
-    drawRect ui (SDL.Rectangle (SDL.P (SDL.V2 x y)) (SDL.V2 cellWidth cellHeight)) highlightColor
+    drawRect ui (SDL.Rectangle (P (SDL.V2 x y)) (SDL.V2 cellWidth cellHeight)) highlightColor
 
 -- | Draw the status bar
 drawStatusBar :: TrackerUI -> IO ()
@@ -305,7 +315,7 @@ drawStatusBar ui = do
   
   -- Draw status bar background
   let statusY = screenHeight - cellHeight
-  drawRect ui (SDL.Rectangle (SDL.P (SDL.V2 0 statusY)) (SDL.V2 screenWidth cellHeight)) (getColor "row_even")
+  drawRect ui (SDL.Rectangle (P (SDL.V2 0 statusY)) (SDL.V2 screenWidth cellHeight)) (getColor "row_even")
   
   -- Draw file info
   let fileInfo = case uiFilePath ui of
@@ -346,7 +356,7 @@ drawEditBox ui = do
     -- Only draw if the edit box is visible
     when (y >= cellHeight && y < screenHeight - cellHeight) $ do
       -- Draw edit background
-      drawRect ui (SDL.Rectangle (SDL.P (SDL.V2 x y)) (SDL.V2 cellWidth cellHeight)) (getColor "selected")
+      drawRect ui (SDL.Rectangle (P (SDL.V2 x y)) (SDL.V2 cellWidth cellHeight)) (getColor "selected")
       
       -- Draw edit text with cursor
       drawText ui (editText ++ "_") (x + 5, y + 3) (getColor "text")
@@ -354,19 +364,19 @@ drawEditBox ui = do
 -- | Draw the entire tracker UI
 drawUI :: TrackerUI -> IO ()
 drawUI ui = do
-  -- Clear screen with background color
-  SDL.rendererDrawColor (uiRenderer ui) $= getColor "background"
-  SDL.clear (uiRenderer ui)
-  
-  -- Draw components
-  drawHeader ui
-  drawTrackerRows ui
-  drawSelection ui
-  drawStatusBar ui
-  drawEditBox ui
-  
-  -- Present the rendered frame
-  SDL.present (uiRenderer ui)
+    -- Clear screen with background color
+    SDL.rendererDrawColor (uiRenderer ui) $= (getColor "background")
+    SDL.clear (uiRenderer ui)
+    
+    -- Draw components
+    drawHeader ui
+    drawTrackerRows ui
+    drawSelection ui
+    drawStatusBar ui
+    drawEditBox ui
+    
+    -- Present the rendered frame
+    SDL.present (uiRenderer ui)
 
 -- | Get cell value
 getCellValue :: TrackerUI -> Int -> Int -> Int -> IO String

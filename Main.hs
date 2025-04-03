@@ -5,11 +5,12 @@ module Main where
 import Data.Ratio
 import Debug.Trace
 import Euterpea
+import System.Process (system)
 import qualified TrackerMain
-import qualified TrackerTest
+-- import qualified TrackerTest
 
--- Just Intonation Types
-type JustPitch = (Double, Ratio Integer) -- (base frequency in Hz, ratio)
+-- Import core just intonation functionality
+import JustIntonationCore
 
 -- Helper to create a just pitch from a base frequency and ratio
 j :: Double -> Ratio Integer -> JustPitch
@@ -44,53 +45,6 @@ octave = 2 % 1
 unison :: Ratio Integer
 unison = 1 % 1
 
--- Create a sine wave instrument for just intonation
-sineTable :: Table
-sineTable = tableSinesN 4096 [1]
-
--- Create a signal function for a just pitch
-justSF :: JustPitch -> Dur -> AudSF () Double
-justSF (freq, _) du =
-  let dd = fromRational du
-   in trace ("Generating signal: duration=" ++ show dd ++ "s, frequency=" ++ show freq ++ "Hz") $
-        proc _ -> do
-          -- Generate sine wave at specified frequency
-          y <- osc sineTable 0 -< freq
-          -- Apply an envelope to avoid clicks at note boundaries
-          ex <- envLineSeg [0, 1, 1, 0] [0.01 * dd, 0.94 * dd, 0.05 * dd] -< ()
-          returnA -< y * ex * 0.5 -- Scale down the amplitude
-
--- Convert our just intonation music to a signal function
-justToSF :: Music (Double, Rational) -> AudSF () Double
-justToSF (Prim (Note du (freq, ratio))) =
-  trace ("Converting note to signal: duration=" ++ show du ++ ", frequency=" ++ show freq ++ "Hz") $
-    justSF (freq, ratio) du
-justToSF (Prim (Rest du)) =
-  let dd = fromRational du
-   in proc _ -> do
-        e <- envLineSeg [0, 0] [dd] -< ()
-        returnA -< 0
-justToSF (m1 :+: m2) = proc _ -> do
-    -- Track the current time
-    t <- integral -< 1
-    -- Calculate the duration of m1
-    let d1 = Euterpea.dur m1
-    -- Only play m1 if we're within its duration
-    out1 <- if t < fromRational d1 
-           then justToSF m1 -< ()
-           else returnA -< 0
-    -- Only play m2 if we've passed m1's duration
-    out2 <- if t >= fromRational d1
-           then justToSF m2 -< ()
-           else returnA -< 0
-    -- Sum the outputs
-    returnA -< out1 + out2
-justToSF (m1 :=: m2) = proc _ -> do
-  y1 <- justToSF m1 -< ()
-  y2 <- justToSF m2 -< ()
-  returnA -< (y1 + y2) * 0.5 -- Scale down parallel notes
-justToSF (Modify _ m) = justToSF m
-
 -- Example melody using just intonation
 justMelody :: Music (Double, Rational)
 justMelody =
@@ -100,10 +54,6 @@ justMelody =
       Prim (Note qn (j 440 perfectFifth)), -- Perfect fifth up (660Hz)
       Prim (Note qn (j 440 octave)) -- Octave up (880Hz)
     ]
-
--- Custom writeWav function that uses our just intonation signal function
-writeJustWav :: FilePath -> Double -> Music (Double, Rational) -> IO ()
-writeJustWav file dur m = outFile file dur (justToSF m)
 
 -- Function to run an example from Examples.hs
 runExample :: IO ()
@@ -139,9 +89,8 @@ main = do
   putStrLn "3. Play minor arpeggio"
   putStrLn "4. Play just scale"
   putStrLn "5. Open Tracker interface"
-  putStrLn "6. Run Tracker tests"
-  putStrLn "7. Exit"
-  putStrLn "Enter your choice (1-7): "
+  putStrLn "6. Exit"
+  putStrLn "Enter your choice (1-6): "
   
   choice <- getLine
   case choice of
@@ -202,14 +151,7 @@ main = do
       TrackerMain.trackerMenu
       main -- Return to menu
     
-    "6" -> do
-      putStrLn "Running Tracker tests..."
-      TrackerTest.runTrackerTests
-      putStrLn "Press Enter to return to the main menu."
-      _ <- getLine
-      main -- Return to menu
-    
-    "7" -> putStrLn "Goodbye!"
+    "6" -> putStrLn "Goodbye!"
     
     _ -> do
       putStrLn "Invalid choice. Please try again."

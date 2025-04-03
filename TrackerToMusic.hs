@@ -5,8 +5,10 @@ module TrackerToMusic where
 import Data.Ratio
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Euterpea
-import Main hiding (main)
+-- Use the core functionality
+import JustIntonationCore
 import TrackerTypes
+import TrackerParser (readTrackerFile)
 
 -- | Convert a TrackerFile to Euterpea Music format
 trackerToMusic :: TrackerFile -> Music (Double, Rational)
@@ -207,6 +209,6 @@ loadAndRenderTrackerFile inputPath outputPath duration = do
       renderTrackerFile tf outputPath duration
       putStrLn "Done!"
 
--- | Helper function to read tracker files, imported from TrackerParser
-readTrackerFile :: FilePath -> IO (Either String TrackerFile)
-readTrackerFile = error "Import TrackerParser for this function"
+-- | This is just a re-export from TrackerParser
+-- We shouldn't define it here to avoid conflicts
+-- readTrackerFile :: FilePath -> IO (Either String TrackerFile)

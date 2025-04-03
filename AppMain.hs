@@ -13,6 +13,7 @@ main = do
   case args of
     ["--cli"] -> Main.main       -- CLI version
     ["--help"] -> showHelp
+    ["--test"] -> putStrLn "Run tests with: cabal test"
     _ -> MainGUI.mainGUI         -- Default to GUI version
 
 -- | Show help information
@@ -24,3 +25,4 @@ showHelp = do
   putStrLn "  euterpea2-project           - Launch graphical interface (default)"
   putStrLn "  euterpea2-project --cli     - Launch command-line interface"
   putStrLn "  euterpea2-project --help    - Show this help message"
+  putStrLn "  cabal test                  - Run tests"

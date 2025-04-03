@@ -3,6 +3,7 @@
 module TrackerParser where
 
 import Control.Monad (forM)
+import Control.Exception (try)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Ratio

@@ -18,11 +18,11 @@ executable euterpea2-project
     main-is:          AppMain.hs
     other-modules:    Main,
                       MainGUI,
+                      JustIntonationCore,
                       TrackerTypes,
                       TrackerParser,
                       TrackerToMusic,
-                      TrackerMain,
-                      TrackerTest
+                      TrackerMain
     build-depends:    base ^>=4.12.0.0,
                       Euterpea,
                       HSoM,
@@ -30,6 +30,10 @@ executable euterpea2-project
                       directory,
                       aeson,
                       text,
-                      bytestring
+                      bytestring,
+                      process,
+                      ansi-terminal,
+                      unix,
+                      temporary
     hs-source-dirs:   .
     default-language: Haskell2010

@@ -6,8 +6,38 @@ import Text.Printf
 import System.Exit
 import Data.Ratio
 import Euterpea
-import Main hiding (main)
+import JustIntonationCore
+import qualified Main
 import qualified TrackerMain
+
+-- Just Intonation constants
+-- Helper to create a just pitch from a base frequency and ratio
+j :: Double -> Ratio Integer -> JustPitch
+j base ratio =
+  let exactFreq = base * fromRational ratio
+   in (exactFreq, ratio)
+
+-- Common just intervals
+perfectFifth :: Ratio Integer
+perfectFifth = 3 % 2
+
+majorThird :: Ratio Integer
+majorThird = 5 % 4
+
+minorThird :: Ratio Integer
+minorThird = 6 % 5
+
+perfectFourth :: Ratio Integer
+perfectFourth = 4 % 3
+
+majorSixth :: Ratio Integer
+majorSixth = 5 % 3
+
+octave :: Ratio Integer
+octave = 2 % 1
+
+unison :: Ratio Integer
+unison = 1 % 1
 
 -- | A very simple terminal-based UI for non-technical users
 mainGUI :: IO ()
@@ -34,6 +64,13 @@ mainGUI = do
   case choice of
     "1" -> do
       putStrLn "Creating default melody..."
+      -- Create a simple melody
+      let justMelody = line
+            [ Prim (Note qn (j 440 unison)),      -- A4 (440Hz)
+              Prim (Note qn (j 440 majorThird)),  -- Major third up (550Hz)
+              Prim (Note qn (j 440 perfectFifth)),-- Perfect fifth up (660Hz)
+              Prim (Note qn (j 440 octave))       -- Octave up (880Hz)
+            ]
       writeJustWav "just_melody.wav" 4.0 justMelody
       putStrLn "Created just_melody.wav in the current directory."
       waitForKeypress

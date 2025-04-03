@@ -215,9 +215,9 @@ To run your composition:
 3. Run `cabal run` from the project directory
 4. Play the resulting WAV file with any media player
 
-## Using the Tracker Interface
+## Using the Terminal Tracker Interface
 
-The tracker interface allows you to create music using a grid-based system, where:
+The Just Intonation Tracker provides a terminal-based interface similar to classic DOS trackers. It allows you to create music using a grid-based system, where:
 - Rows represent time steps
 - Columns represent different voices/instruments
 - Each cell can contain a note frequency or ratio
@@ -226,12 +226,58 @@ To use the tracker:
 
 1. Run the application and select option 5 from the main menu
 2. Choose from the following tracker options:
+   - Open terminal tracker with new file
+   - Open terminal tracker with existing file
    - Load and render an existing tracker file
    - Display information about a tracker file
    - Create an example tracker file
-   - Create an empty tracker file
    - Export a tracker file to CSV for editing in a spreadsheet
-   
+
+### Terminal Tracker Controls
+
+The terminal tracker has a full interface with keyboard shortcuts:
+
+```
+Navigation:
+  Arrow keys / hjkl - Move cursor
+  t - Jump to tempo field
+  n - Jump to note field
+  i - Jump to instrument field
+  v - Jump to volume field
+  f - Jump to effect field
+
+Editing:
+  Enter - Start/finish editing
+  Esc - Cancel edit
+  Backspace - Delete character
+
+Selection and Clipboard:
+  Shift+Arrow keys - Select multiple cells
+  Ctrl+C - Copy selected cells
+  Ctrl+V - Paste copied cells at cursor position
+
+Actions:
+  s - Save tracker file
+  e - Export to WAV
+  c - Capture frequency/tempo value
+  a - Add row at current position
+  d - Delete current row
+  q - Quit
+  ? / h - Show help
+```
+
+### Entering Notes and Values
+
+You can enter different types of values in the tracker:
+
+- **Notes**: Direct frequency (e.g., "440") or ratio (e.g., "3:2")
+- **Tempo**: Direct BPM (e.g., "120") or ratio (e.g., "3:2")
+- **Instruments**: 'sin' (sine), 'sqr' (square), 'saw' (sawtooth), 'tri' (triangle)
+- **Volume**: 0-100
+- **Effects**: First character is command (e.g., 'A' for arpeggio), rest is value
+
+The "Capture" function (c key) allows you to store a current frequency or tempo, which serves as the reference point for future ratio inputs, making it easy to maintain harmonic relationships.
+
 ### Tracker File Format
 
 Tracker files use a JSON format with the following structure:
@@ -261,35 +307,23 @@ Tracker files use a JSON format with the following structure:
 }
 ```
 
-Notes can be entered as:
-- Direct frequencies (e.g., "440" for A4)
-- Ratios (e.g., "3:2" for a perfect fifth above the base or previous note)
+### Working with Example Files
 
-### Testing the Tracker Backend
-
-To verify that the tracker backend is working correctly, you can run the built-in tests:
-
-1. From the main menu, select option 6 "Run Tracker tests"
-2. The tests will validate:
-   - Note parsing (direct frequencies and ratios)
-   - Tempo parsing
-   - Instrument handling
-   - Volume handling
-   - Effect handling
-   - Complete tracker file conversion
-
-You can also load and render example tracker files from the tracker menu:
+You can load and render example tracker files from the tracker menu:
 1. From the main menu, select option 5 "Open Tracker interface"
-2. From the tracker menu, select option 6 "Load and render test files"
+2. From the tracker menu, select option 7 "Load and render test files"
 3. Choose from the available test files:
    - Basic example tracker (simple melody and chord)
    - Complex example tracker (various instruments, effects, and tempo changes)
    - Instrument test tracker (comparison of different instrument types)
+   - User example tracker (your own saved compositions)
 
 The tracker system currently supports:
 - Four instrument types: sine (sin), square (sqr), sawtooth (saw), and triangle (tri)
 - Volume control (0-100%)
 - Tempo changes (direct BPM or ratios)
 - Basic effects (arpeggio, transpose)
+- Adding and deleting rows
+- Saving and loading tracker files
 
 Enjoy creating music with pure ratios and have fun exploring the world of Just Intonation!

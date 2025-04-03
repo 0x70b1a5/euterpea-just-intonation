@@ -22,26 +22,55 @@ jobs:
     - name: Update Cabal package list
       run: cabal update
     
-    - name: Set up MSYS2
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        install: mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
-        path-type: inherit
+    - name: Download SDL2 libraries
+      run: |
+        # Create SDL directory
+        mkdir -p C:/SDL2
+
+        # Download and extract SDL2
+        curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5-win32-x64.zip -o SDL2.zip
+        Expand-Archive -Path SDL2.zip -DestinationPath C:/SDL2 -Force
+        
+        # Download and extract SDL2_ttf
+        curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2-win32-x64.zip -o SDL2_ttf.zip
+        Expand-Archive -Path SDL2_ttf.zip -DestinationPath C:/SDL2 -Force
+        
+        # Check SDL directory structure
+        dir C:/SDL2
+        dir C:/SDL2/*/
+        
+        # Add SDL2 to path for build tools to find
+        echo "C:/SDL2/lib/x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
     
     - name: Install dependencies
       env:
-        PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
-        PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
+        SDL2_DIR: C:/SDL2
+        SDL2_LIB_DIR: C:/SDL2/lib/x64
+        SDL2_INCLUDE_DIR: C:/SDL2/include
+        # Configure LD_LIBRARY_PATH to find the SDL2 dlls
+        LD_LIBRARY_PATH: C:/SDL2/lib/x64
       run: |
+        # Create a cabal configuration for building SDL2 without pkgconfig
+        echo "package sdl2" > cabal.project.local
+        echo "  flags: -pkgconfig" >> cabal.project.local
+        echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
+        echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+        
+        echo "package sdl2-ttf" >> cabal.project.local
+        echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
+        echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+        
+        # Install dependencies
         cabal install --lib UISF
         cabal install --lib HSoM
     
     - name: Build
       env:
-        PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
-        PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
+        SDL2_DIR: C:/SDL2
+        SDL2_LIB_DIR: C:/SDL2/lib/x64
+        SDL2_INCLUDE_DIR: C:/SDL2/include
+        LD_LIBRARY_PATH: C:/SDL2/lib/x64
+      # The cabal.project.local file created earlier is used here
       run: cabal build
     
     - name: Create executable directory
@@ -51,8 +80,11 @@ jobs:
     
     - name: Install executable
       env:
-        PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
-        PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
+        SDL2_DIR: C:/SDL2
+        SDL2_LIB_DIR: C:/SDL2/lib/x64
+        SDL2_INCLUDE_DIR: C:/SDL2/include
+        LD_LIBRARY_PATH: C:/SDL2/lib/x64
+      # The cabal.project.local file created earlier is used here
       run: cabal install --installdir=dist/windows exe:euterpea2-project
     
     - name: Rename executable
@@ -62,14 +94,9 @@ jobs:
     
     - name: Copy DLL dependencies
       run: |
-        copy C:\msys64\mingw64\bin\SDL2.dll dist\windows\
-        copy C:\msys64\mingw64\bin\SDL2_ttf.dll dist\windows\
-        copy C:\msys64\mingw64\bin\libfreetype-6.dll dist\windows\
-        copy C:\msys64\mingw64\bin\zlib1.dll dist\windows\
-        copy C:\msys64\mingw64\bin\libpng16-16.dll dist\windows\
-        copy C:\msys64\mingw64\bin\libbz2-1.dll dist\windows\
-        copy C:\msys64\mingw64\bin\libbrotlidec.dll dist\windows\
-        copy C:\msys64\mingw64\bin\libbrotlicommon.dll dist\windows\
+        # Copy all SDL2 DLLs
+        dir C:\SDL2\lib\x64\
+        copy C:\SDL2\lib\x64\*.dll dist\windows\
     
     - name: Copy README
       run: copy WINDOWS_README.md dist/windows/README.md

@@ -11,46 +11,48 @@ The simplest and most reliable approach is to build directly on Windows:
    - Choose to install GHC and Cabal during setup
    - Make sure to let the installer add GHC to your PATH
 
-2. Install MSYS2 for SDL libraries:
-   - Download and install MSYS2 from https://www.msys2.org/
-   - Open MSYS2 MinGW 64-bit terminal and run:
-   ```
-   pacman -Syu
-   pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
-   ```
-   - Add C:\msys64\mingw64\bin to your PATH environment variable
+2. Download official SDL2 binaries:
+   - Download SDL2 from https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5-win32-x64.zip
+   - Download SDL2_ttf from https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2-win32-x64.zip
+   - Extract both to a folder (e.g., C:\SDL2)
+   - Add the lib/x64 folder to your PATH environment variable
 
-3. Install required Haskell dependencies:
+3. Configure Cabal to build SDL2 without pkgconfig:
+   ```
+   echo "package sdl2" > cabal.project.local
+   echo "  flags: -pkgconfig" >> cabal.project.local
+   echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
+   echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+   
+   echo "package sdl2-ttf" >> cabal.project.local
+   echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
+   echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+   ```
+
+4. Install required Haskell dependencies:
    ```
    cabal update
    cabal install --lib UISF
    cabal install --lib HSoM
    ```
 
-4. Clone or copy this project to the Windows machine
+5. Clone or copy this project to the Windows machine
 
-5. Build the project:
+6. Build the project:
    ```
    cabal build
    ```
 
-6. Create the executable:
+7. Create the executable:
    ```
    cabal install --installdir=dist\windows exe:euterpea2-project
    ```
 
-7. The executable will be in `dist\windows\euterpea2-project.exe` - you can rename it to `JustIntonationMusic.exe`
+8. The executable will be in `dist\windows\euterpea2-project.exe` - you can rename it to `JustIntonationMusic.exe`
 
-8. Copy required DLL files to the same directory as the executable:
+9. Copy required DLL files to the same directory as the executable:
    ```
-   copy C:\msys64\mingw64\bin\SDL2.dll dist\windows\
-   copy C:\msys64\mingw64\bin\SDL2_ttf.dll dist\windows\
-   copy C:\msys64\mingw64\bin\libfreetype-6.dll dist\windows\
-   copy C:\msys64\mingw64\bin\zlib1.dll dist\windows\
-   copy C:\msys64\mingw64\bin\libpng16-16.dll dist\windows\
-   copy C:\msys64\mingw64\bin\libbz2-1.dll dist\windows\
-   copy C:\msys64\mingw64\bin\libbrotlidec.dll dist\windows\
-   copy C:\msys64\mingw64\bin\libbrotlicommon.dll dist\windows\
+   copy C:\SDL2\lib\x64\*.dll dist\windows\
    ```
 
 ## Option 2: Cross-compiling from Linux
@@ -143,26 +145,45 @@ You can use GitHub Actions to easily build Windows executables without needing W
        - name: Update Cabal package list
          run: cabal update
        
-       - name: Set up MSYS2
-         uses: msys2/setup-msys2@v2
-         with:
-           msystem: MINGW64
-           update: true
-           install: mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
-           path-type: inherit
+       - name: Download SDL2 libraries
+         run: |
+           # Create SDL directory
+           mkdir -p C:/SDL2
+
+           # Download and extract SDL2
+           curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5-win32-x64.zip -o SDL2.zip
+           Expand-Archive -Path SDL2.zip -DestinationPath C:/SDL2 -Force
+           
+           # Download and extract SDL2_ttf
+           curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2-win32-x64.zip -o SDL2_ttf.zip
+           Expand-Archive -Path SDL2_ttf.zip -DestinationPath C:/SDL2 -Force
+           
+           # Add SDL2 to path for build tools to find
+           echo "C:/SDL2/lib/x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
        
        - name: Install dependencies
          env:
-           PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
-           PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
+           SDL2_DIR: C:/SDL2
+           SDL2_LIB_DIR: C:/SDL2/lib/x64
+           SDL2_INCLUDE_DIR: C:/SDL2/include
+           LD_LIBRARY_PATH: C:/SDL2/lib/x64
          run: |
+           # Create a cabal configuration for building SDL2 without pkgconfig
+           echo "package sdl2" > cabal.project.local
+           echo "  flags: -pkgconfig" >> cabal.project.local
+           echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
+           echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+           
+           echo "package sdl2-ttf" >> cabal.project.local
+           echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
+           echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+           
+           # Install dependencies
            cabal install --lib UISF
            cabal install --lib HSoM
        
        - name: Build
-         env:
-           PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
-           PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
+         # The cabal.project.local file created earlier is used here
          run: cabal build
        
        - name: Create executable directory
@@ -171,9 +192,7 @@ You can use GitHub Actions to easily build Windows executables without needing W
            mkdir dist\windows 2>nul || echo "dist\windows already exists"
        
        - name: Install executable
-         env:
-           PKG_CONFIG_PATH: C:/msys64/mingw64/lib/pkgconfig
-           PATH: C:/msys64/mingw64/bin;${{ env.PATH }}
+         # The cabal.project.local file created earlier is used here
          run: cabal install --installdir=dist/windows exe:euterpea2-project
        
        - name: Rename executable
@@ -183,14 +202,9 @@ You can use GitHub Actions to easily build Windows executables without needing W
        
        - name: Copy DLL dependencies
          run: |
-           copy C:\msys64\mingw64\bin\SDL2.dll dist\windows\
-           copy C:\msys64\mingw64\bin\SDL2_ttf.dll dist\windows\
-           copy C:\msys64\mingw64\bin\libfreetype-6.dll dist\windows\
-           copy C:\msys64\mingw64\bin\zlib1.dll dist\windows\
-           copy C:\msys64\mingw64\bin\libpng16-16.dll dist\windows\
-           copy C:\msys64\mingw64\bin\libbz2-1.dll dist\windows\
-           copy C:\msys64\mingw64\bin\libbrotlidec.dll dist\windows\
-           copy C:\msys64\mingw64\bin\libbrotlicommon.dll dist\windows\
+           # Copy all SDL2 DLLs
+           dir C:\SDL2\lib\x64\
+           copy C:\SDL2\lib\x64\*.dll dist\windows\
        
        - name: Copy README
          run: copy WINDOWS_README.md dist/windows/README.md
@@ -219,12 +233,7 @@ For your friend:
    - Required SDL2 DLLs (from the artifacts created by GitHub Actions):
      - SDL2.dll
      - SDL2_ttf.dll
-     - libfreetype-6.dll
-     - zlib1.dll
-     - libpng16-16.dll
-     - libbz2-1.dll
-     - libbrotlidec.dll
-     - libbrotlicommon.dll
+     - And any other DLLs from the SDL2 lib/x64 directory
    
 2. Optional additions:
    - Example WAV files

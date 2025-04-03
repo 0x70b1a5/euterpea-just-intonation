@@ -19,6 +19,7 @@ import JustIntonationCore
 import TrackerTypes
 import TrackerParser
 import TrackerToMusic
+import qualified TrackerSDL
 
 -- | Display tracker file information
 displayTrackerInfo :: TrackerFile -> IO ()
@@ -1487,13 +1488,15 @@ trackerMenu = do
   putStrLn "Choose an option:"
   putStrLn "1. Open terminal tracker with new file"
   putStrLn "2. Open terminal tracker with existing file"
-  putStrLn "3. Load and render tracker file"
-  putStrLn "4. Display tracker file information"
-  putStrLn "5. Create example tracker file"
-  putStrLn "6. Export tracker file to CSV (for editing)"
-  putStrLn "7. Load and render test files"
-  putStrLn "8. Return to main menu"
-  putStrLn "Enter your choice (1-8): "
+  putStrLn "3. Open SDL tracker with new file"
+  putStrLn "4. Open SDL tracker with existing file"
+  putStrLn "5. Load and render tracker file"
+  putStrLn "6. Display tracker file information"
+  putStrLn "7. Create example tracker file"
+  putStrLn "8. Export tracker file to CSV (for editing)"
+  putStrLn "9. Load and render test files"
+  putStrLn "10. Return to main menu"
+  putStrLn "Enter your choice (1-10): "
   
   choice <- getLine
   case choice of
@@ -1540,6 +1543,46 @@ trackerMenu = do
             Right tf -> openTerminalTracker tf (Just filePath)
     
     "3" -> do
+      putStrLn "Enter output file path: "
+      filePath <- getLine
+      putStrLn "Enter base frequency (Hz): "
+      baseFreqStr <- getLine
+      let baseFreq = read baseFreqStr :: Double
+      putStrLn "Enter base tempo (BPM): "
+      tempoStr <- getLine
+      let tempo = read tempoStr :: Double
+      putStrLn "Enter rows per beat: "
+      rowsPerBeatStr <- getLine
+      let rowsPerBeat = read rowsPerBeatStr :: Int
+      putStrLn "Enter number of rows: "
+      numRowsStr <- getLine
+      let numRows = read numRowsStr :: Int
+      putStrLn "Enter number of channels: "
+      numChannelsStr <- getLine
+      let numChannels = read numChannelsStr :: Int
+      
+      -- Create the file
+      let tf = initTrackerFile baseFreq tempo rowsPerBeat numRows numChannels
+      writeTrackerFile filePath tf
+      
+      -- Open in SDL tracker
+      TrackerSDL.startSDLTracker (Just filePath)
+      trackerMenu
+    
+    "4" -> do
+      putStrLn "Enter tracker file path: "
+      filePath <- getLine
+      fileExists <- Dir.doesFileExist filePath
+      if not fileExists
+        then do
+          putStrLn $ "Error: File not found: " ++ filePath
+          trackerMenu
+        else do
+          -- Open in SDL tracker
+          TrackerSDL.startSDLTracker (Just filePath)
+          trackerMenu
+    
+    "5" -> do
       putStrLn "Enter tracker file path: "
       filePath <- getLine
       fileExists <- Dir.doesFileExist filePath
@@ -1556,7 +1599,7 @@ trackerMenu = do
           loadAndRenderTrackerFile filePath outputPath duration
           trackerMenu
     
-    "4" -> do
+    "6" -> do
       putStrLn "Enter tracker file path: "
       filePath <- getLine
       result <- readTrackerFile filePath
@@ -1565,13 +1608,13 @@ trackerMenu = do
         Right tf -> displayTrackerInfo tf
       trackerMenu
     
-    "5" -> do
+    "7" -> do
       putStrLn "Enter output file path: "
       filePath <- getLine
       createExampleTrackerFile filePath
       trackerMenu
     
-    "6" -> do
+    "8" -> do
       putStrLn "Enter tracker file path: "
       filePath <- getLine
       putStrLn "Enter output CSV path: "
@@ -1582,7 +1625,7 @@ trackerMenu = do
         Right tf -> exportTrackerCsv tf csvPath
       trackerMenu
     
-    "7" -> do
+    "9" -> do
       putStrLn "Loading and rendering test files..."
       putStrLn "1. Basic example tracker (example_tracker.json)"
       putStrLn "2. Complex example tracker (complex_example_tracker.json)"
@@ -1600,7 +1643,7 @@ trackerMenu = do
       
       trackerMenu
       
-    "8" -> return ()
+    "10" -> return ()
     
     _ -> do
       putStrLn "Invalid choice. Please try again."

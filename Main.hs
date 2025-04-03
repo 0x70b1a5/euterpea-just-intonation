@@ -97,8 +97,9 @@ mainWithErrorHandling = do
   putStrLn "4. Play just scale"
   putStrLn "5. Open Terminal Tracker Interface"
   putStrLn "6. Open SDL Tracker Interface"
-  putStrLn "7. Exit"
-  putStrLn "Enter your choice (1-7): "
+  putStrLn "7. Test SDL Installation"
+  putStrLn "8. Exit"
+  putStrLn "Enter your choice (1-8): "
   
   choice <- getLine
   case choice of
@@ -164,7 +165,17 @@ mainWithErrorHandling = do
       TrackerSDL.startSDLTracker Nothing
       mainWithErrorHandling -- Return to menu
     
-    "7" -> putStrLn "Goodbye!"
+    "7" -> do
+      putStrLn "Testing SDL installation..."
+      success <- TrackerSDL.testSDL
+      if success
+        then putStrLn "SDL test completed successfully! You can use the SDL Tracker interface."
+        else putStrLn "SDL test failed. Please run ./install_sdl_deps.sh to install required libraries."
+      putStrLn "Press Enter to continue..."
+      _ <- getLine
+      mainWithErrorHandling -- Return to menu
+      
+    "8" -> putStrLn "Goodbye!"
     
     _ -> do
       putStrLn "Invalid choice. Please try again."

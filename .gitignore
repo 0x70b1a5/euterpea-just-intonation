@@ -5,3 +5,6 @@ dist
 dist-newstyle
 *.wav
 *.mid
+*.json
+*.bak
+*.log

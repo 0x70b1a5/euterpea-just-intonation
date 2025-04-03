@@ -71,14 +71,16 @@ instrumentToString Triangle = "tri"
 
 -- | Default values for a new tracker file
 defaultTrackerFile :: TrackerFile
-defaultTrackerFile = TrackerFile
-  { baseFrequency = 440.0
-  , baseTempo = 120.0
-  , rowsPerBeat = 4
-  , numRows = 32
-  , numChannels = 4
-  , trackerData = []
-  }
+defaultTrackerFile = 
+  let emptyRows = replicate 32 (emptyTrackerRow 4)
+  in TrackerFile
+    { baseFrequency = 440.0
+    , baseTempo = 120.0
+    , rowsPerBeat = 4
+    , numRows = 32
+    , numChannels = 4
+    , trackerData = emptyRows
+    }
 
 -- | Create an empty tracker row
 emptyTrackerRow :: Int -> TrackerRow

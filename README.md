@@ -8,11 +8,16 @@ This project extends Euterpea with Just Intonation capabilities, allowing you to
 
 - GHC (Glasgow Haskell Compiler)
 - Cabal (Haskell package manager)
+- SDL2 and SDL2_ttf libraries (for the SDL-based tracker interface)
 
 ### Installation
 
 1. Clone this repository
-2. Run `cabal build` to compile the project
+2. Install SDL dependencies:
+   ```
+   ./install_sdl_deps.sh
+   ```
+3. Run `cabal build` to compile the project
 
 ## Just Intonation Basics
 
@@ -215,27 +220,34 @@ To run your composition:
 3. Run `cabal run` from the project directory
 4. Play the resulting WAV file with any media player
 
-## Using the Terminal Tracker Interface
+## Using the Tracker Interface
 
-The Just Intonation Tracker provides a terminal-based interface similar to classic DOS trackers. It allows you to create music using a grid-based system, where:
+The Just Intonation Tracker provides two interface options:
+1. A terminal-based interface similar to classic DOS trackers
+2. An SDL-based graphical interface for a more modern experience
+
+Both allow you to create music using a grid-based system, where:
 - Rows represent time steps
 - Columns represent different voices/instruments
 - Each cell can contain a note frequency or ratio
 
 To use the tracker:
 
-1. Run the application and select option 5 from the main menu
-2. Choose from the following tracker options:
+1. Run the application with `cabal run`
+2. Select option 5 for the terminal tracker or option 6 for the SDL tracker
+3. For more options, access the Tracker Menu by choosing option 5, which includes:
    - Open terminal tracker with new file
    - Open terminal tracker with existing file
+   - Open SDL tracker with new file
+   - Open SDL tracker with existing file 
    - Load and render an existing tracker file
    - Display information about a tracker file
    - Create an example tracker file
    - Export a tracker file to CSV for editing in a spreadsheet
 
-### Terminal Tracker Controls
+### Tracker Controls
 
-The terminal tracker has a full interface with keyboard shortcuts:
+Both the terminal and SDL trackers support similar keyboard shortcuts:
 
 ```
 Navigation:

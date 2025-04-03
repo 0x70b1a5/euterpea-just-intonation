@@ -29,31 +29,31 @@ jobs:
         mkdir -p C:/SDL2/lib/x64
         mkdir -p C:/SDL2/include
 
-        # Download and extract SDL2
-        curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5-win32-x64.zip -o SDL2.zip
-        Expand-Archive -Path SDL2.zip -DestinationPath C:/SDL2_temp -Force
+        # Download and extract SDL2 development files
+        curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip -o SDL2-devel.zip
+        Expand-Archive -Path SDL2-devel.zip -DestinationPath C:/SDL2_devel_temp -Force
         
         # List the extracted content to see structure
-        dir C:/SDL2_temp -Recurse | Select-Object FullName | Out-File -FilePath SDL2_structure.txt
+        dir C:/SDL2_devel_temp -Recurse | Select-Object -First 20 FullName | Out-File -FilePath SDL2_structure.txt
         Get-Content SDL2_structure.txt
         
-        # Move SDL2 files to the correct structure (adjusting paths based on actual structure)
-        copy C:/SDL2_temp/*.dll C:/SDL2/lib/x64/
-        copy C:/SDL2_temp/*.lib C:/SDL2/lib/x64/
-        copy C:/SDL2_temp/include/*.h C:/SDL2/include/
+        # Move SDL2 files to the correct structure from the devel package
+        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/bin/*.dll C:/SDL2/lib/x64/
+        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/lib/*.lib C:/SDL2/lib/x64/
+        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/
         
-        # Download and extract SDL2_ttf
-        curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2-win32-x64.zip -o SDL2_ttf.zip
-        Expand-Archive -Path SDL2_ttf.zip -DestinationPath C:/SDL2_ttf_temp -Force
+        # Download and extract SDL2_ttf development files
+        curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-devel-2.20.2-mingw.zip -o SDL2_ttf-devel.zip
+        Expand-Archive -Path SDL2_ttf-devel.zip -DestinationPath C:/SDL2_ttf_devel_temp -Force
         
         # List the extracted content to see structure
-        dir C:/SDL2_ttf_temp -Recurse | Select-Object FullName | Out-File -FilePath SDL2_ttf_structure.txt
+        dir C:/SDL2_ttf_devel_temp -Recurse | Select-Object -First 20 FullName | Out-File -FilePath SDL2_ttf_structure.txt
         Get-Content SDL2_ttf_structure.txt
         
-        # Move SDL2_ttf files to the correct structure (adjusting paths based on actual structure)
-        copy C:/SDL2_ttf_temp/*.dll C:/SDL2/lib/x64/
-        copy C:/SDL2_ttf_temp/*.lib C:/SDL2/lib/x64/ 
-        copy C:/SDL2_ttf_temp/include/*.h C:/SDL2/include/
+        # Move SDL2_ttf files to the correct structure from the devel package
+        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/bin/*.dll C:/SDL2/lib/x64/
+        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/lib/*.lib C:/SDL2/lib/x64/ 
+        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/
         
         # Check SDL directory structure
         dir C:/SDL2

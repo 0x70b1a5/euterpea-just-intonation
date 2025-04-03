@@ -22,7 +22,9 @@ executable euterpea2-project
                       TrackerTypes,
                       TrackerParser,
                       TrackerToMusic,
-                      TrackerMain
+                      TrackerMain,
+                      TrackerSDL,
+                      ErrorHandler
     build-depends:    base ^>=4.12.0.0,
                       Euterpea,
                       HSoM,
@@ -33,6 +35,13 @@ executable euterpea2-project
                       bytestring,
                       process,
                       ansi-terminal,
-                      temporary
+                      temporary,
+                      sdl2,
+                      sdl2-ttf,
+                      filepath,
+                      time,
+                      vector,
+                      containers,
+                      linear
     hs-source-dirs:   .
     default-language: Haskell2010

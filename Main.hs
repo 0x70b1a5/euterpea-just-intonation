@@ -6,11 +6,14 @@ import Data.Ratio
 import Debug.Trace
 import Euterpea
 import System.Process (system)
+import Control.Exception (catch, SomeException)
 import qualified TrackerMain
+import qualified TrackerSDL
 -- import qualified TrackerTest
 
 -- Import core just intonation functionality
 import JustIntonationCore
+import ErrorHandler
 
 -- Helper to create a just pitch from a base frequency and ratio
 j :: Double -> Ratio Integer -> JustPitch
@@ -79,7 +82,11 @@ runMyMusic = do
 
 -- Main function with a simple terminal UI
 main :: IO ()
-main = do
+main = withErrorHandling $ mainWithErrorHandling
+
+-- Main function with error handling
+mainWithErrorHandling :: IO ()
+mainWithErrorHandling = do
   putStrLn "========================================"
   putStrLn "Just Intonation Music Generator"
   putStrLn "========================================"
@@ -88,9 +95,10 @@ main = do
   putStrLn "2. Play major arpeggio"
   putStrLn "3. Play minor arpeggio"
   putStrLn "4. Play just scale"
-  putStrLn "5. Open Tracker interface"
-  putStrLn "6. Exit"
-  putStrLn "Enter your choice (1-6): "
+  putStrLn "5. Open Terminal Tracker Interface"
+  putStrLn "6. Open SDL Tracker Interface"
+  putStrLn "7. Exit"
+  putStrLn "Enter your choice (1-7): "
   
   choice <- getLine
   case choice of
@@ -98,7 +106,7 @@ main = do
       putStrLn "Creating default melody..."
       writeJustWav "just_melody.wav" 4.0 justMelody
       putStrLn "Done! Check just_melody.wav in the current folder."
-      main -- Return to menu
+      mainWithErrorHandling -- Return to menu
     
     "2" -> do
       putStrLn "Creating major arpeggio..."
@@ -113,7 +121,7 @@ main = do
             ]
       writeJustWav "major_arpeggio.wav" 4.0 majorArpeggio
       putStrLn "Done! Check major_arpeggio.wav in the current folder."
-      main -- Return to menu
+      mainWithErrorHandling -- Return to menu
     
     "3" -> do
       putStrLn "Creating minor arpeggio..."
@@ -128,7 +136,7 @@ main = do
             ]
       writeJustWav "minor_arpeggio.wav" 4.0 minorArpeggio
       putStrLn "Done! Check minor_arpeggio.wav in the current folder."
-      main -- Return to menu
+      mainWithErrorHandling -- Return to menu
     
     "4" -> do
       putStrLn "Creating just scale..."
@@ -144,15 +152,20 @@ main = do
             ]
       writeJustWav "just_scale.wav" 4.0 justScale
       putStrLn "Done! Check just_scale.wav in the current folder."
-      main -- Return to menu
+      mainWithErrorHandling -- Return to menu
     
     "5" -> do
-      putStrLn "Opening Tracker interface..."
+      putStrLn "Opening Terminal Tracker Interface..."
       TrackerMain.trackerMenu
-      main -- Return to menu
+      mainWithErrorHandling -- Return to menu
     
-    "6" -> putStrLn "Goodbye!"
+    "6" -> do
+      putStrLn "Opening SDL Tracker Interface..."
+      TrackerSDL.startSDLTracker Nothing
+      mainWithErrorHandling -- Return to menu
+    
+    "7" -> putStrLn "Goodbye!"
     
     _ -> do
       putStrLn "Invalid choice. Please try again."
-      main -- Return to menu
+      mainWithErrorHandling -- Return to menu

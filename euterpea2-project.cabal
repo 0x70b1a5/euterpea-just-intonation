@@ -34,7 +34,5 @@ executable euterpea2-project
                       process,
                       ansi-terminal,
                       temporary
-    if !os(windows)
-      build-depends:  unix
     hs-source-dirs:   .
     default-language: Haskell2010

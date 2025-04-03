@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 
 module TrackerMain where
 
@@ -12,7 +13,9 @@ import Euterpea
 import System.Console.ANSI
 import System.Exit (exitSuccess, ExitCode(ExitSuccess))
 import Control.Exception (catch, SomeException, throwIO)
+#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
 import System.Posix.Signals (installHandler, Handler(Catch), sigINT)
+#endif
 import System.Process (system)
 import System.IO.Temp (withSystemTempFile)
 -- Use JustIntonationCore instead of Main
@@ -1449,10 +1452,12 @@ exitTracker state = do
   c <- getChar
   if c == 'y' || c == 'Y'
     then do
+#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
       -- Restore the original SIGINT handler before returning to menu
       case sigintHandler state of
         Just handler -> installHandler sigINT handler Nothing >> return ()
         Nothing -> return ()
+#endif
       trackerMenu  -- Return to main menu
     else trackerLoop state  -- Continue tracking
 
@@ -1472,6 +1477,7 @@ openTerminalTracker tf path = do
   hSetBuffering stdin NoBuffering  -- Read one char at a time
   hSetEcho stdin False             -- Don't echo input
   
+#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
   -- Install a custom SIGINT handler for Ctrl+C to be used for copying
   -- Store the old handler to restore it later
   oldHandler <- installHandler sigINT (Catch $ do
@@ -1479,9 +1485,13 @@ openTerminalTracker tf path = do
     -- This allows Ctrl+C to work for copying without terminating the program
     putChar '\ETX'
     return ()) Nothing
-  
+    
   -- Initialize the tracker state with the original handler saved
   let initialState = (initTrackerState tf path) { sigintHandler = Just oldHandler }
+#else
+  -- On Windows, we don't need the SIGINT handler
+  let initialState = initTrackerState tf path
+#endif
   
   -- Start the tracker loop
   (trackerLoop initialState `catch` (\(e :: SomeException) -> do
@@ -1494,10 +1504,12 @@ openTerminalTracker tf path = do
     putStrLn $ "Error: " ++ show e
     putStrLn "Press Enter to continue..."
     _ <- getLine
+#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
     -- Restore the original SIGINT handler before returning to menu
     case sigintHandler initialState of
       Just handler -> installHandler sigINT handler Nothing >> return ()
       Nothing -> return ()
+#endif
     trackerMenu))
 
 -- | Add tracker functionality to the main menu

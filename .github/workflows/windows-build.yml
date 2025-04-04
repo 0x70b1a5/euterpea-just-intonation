@@ -109,14 +109,18 @@ jobs:
         # Download and patch sdl2-ttf Haskell package
         git clone https://github.com/haskell-game/sdl2-ttf.git
         cd sdl2-ttf
-        # Change Types.hsc to look for SDL_ttf.h instead of SDL2/SDL_ttf.h
-        $typesFile = Get-Content -Path "src/SDL/TTF/Types.hsc" -Raw
-        $updatedTypes = $typesFile -replace '#include "SDL2/SDL_ttf.h"', '#include "SDL_ttf.h"'
-        Set-Content -Path "src/SDL/TTF/Types.hsc" -Value $updatedTypes
+        
+        # Find all hsc files that might include SDL_ttf.h
+        dir src -Recurse -Include *.hsc
+        
+        # Change Font.hsc to look for SDL_ttf.h with correct path
+        $fontFile = Get-Content -Path "src/SDL/Raw/Font.hsc" -Raw
+        $updatedFont = $fontFile -replace '#include "SDL_ttf.h"', '#include "SDL2/SDL_ttf.h"'
+        Set-Content -Path "src/SDL/Raw/Font.hsc" -Value $updatedFont
         
         # Show difference
-        echo "Original include was: #include ""SDL2/SDL_ttf.h"""
-        echo "Updated include is: #include ""SDL_ttf.h"""
+        echo "Original include was: #include ""SDL_ttf.h"""
+        echo "Updated include is: #include ""SDL2/SDL_ttf.h"""
         
         # Install the patched version
         cabal install --lib --extra-include-dirs=C:/SDL2/include/SDL2 --extra-lib-dirs=C:/SDL2/lib/x64

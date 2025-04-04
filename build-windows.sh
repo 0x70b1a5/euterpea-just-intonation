@@ -20,13 +20,11 @@ fi
 
 # Setup cabal project file for cross-compilation
 echo "Setting up cross-compilation..."
-echo "packages: ." > cabal.project.local
-echo "with-compiler: ghc" >> cabal.project.local
-echo "target-platform: x86_64-w64-mingw32" >> cabal.project.local
+cp cabal.project.win cabal.project.local
 
 # Build the project
 echo "Building for Windows target..."
-cabal build
+cabal build --enable-shared --enable-executable-dynamic euterpea2-project
 
 # Check if build succeeded
 if [ $? -ne 0 ]; then

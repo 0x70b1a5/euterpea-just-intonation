@@ -9,47 +9,49 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
     
-    - name: Set up GHC
+    - name: Setup Haskell
       uses: haskell-actions/setup@v2
       with:
         ghc-version: '9.4.8'
         cabal-version: '3.10.2.0'
     
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y mingw-w64 zip
-        # Install dependencies for cross-compilation
-        bash ./install_deps.sh
+    - name: Update Cabal package list
+      run: cabal update
     
-    - name: Build Windows Executable
+    - name: Install dependencies
       run: |
-        # Make the build script executable
-        chmod +x ./build-windows.sh
-        # Run the build script
-        ./build-windows.sh
-        
-    - name: Create Windows Package
+        cabal install --lib UISF
+        cabal install --lib HSoM
+        cabal install --lib Euterpea
+    
+    - name: Build
+      run: cabal build
+    
+    - name: Create executable directory
+      run: mkdir -p dist/windows
+    
+    - name: Install executable
+      run: cabal install --installdir=dist/windows exe:euterpea2-project
+    
+    - name: Rename executable
       run: |
         cd dist/windows
-        zip -r ../../JustIntonationMusic.zip *
-        cd ../..
+        ren euterpea2-project.exe JustIntonationMusic.exe
     
-    - name: Build Web Version
+    - name: Copy README
+      run: copy WINDOWS_README.md dist/windows/README.md
+    
+    - name: Create ZIP package
       run: |
-        # Make the build script executable
-        chmod +x ./build-windows-web.sh
-        # Build the web version
-        ./build-windows-web.sh
-        # Copy web version to distribution
-        cp ./just-intonation-tracker-web.exe dist/windows/
-        
-    - name: Upload artifacts
+        cd dist/windows
+        Compress-Archive -Path * -DestinationPath ..\..\JustIntonationMusic.zip
+        cd ..\..
+    
+    - name: Upload executable artifacts
       uses: actions/upload-artifact@v4
       with:
         name: JustIntonationMusic

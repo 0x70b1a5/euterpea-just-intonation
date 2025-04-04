@@ -39,11 +39,14 @@ jobs:
         choco install msys2 -y
         
         # Update MSYS2 packages
-        $env:PATH = "C:\tools\msys64\usr\bin;$env:PATH"
+        $env:PATH = "C:\tools\msys64\usr\bin;C:\tools\msys64\mingw64\bin;$env:PATH"
         bash -lc "pacman -Syu --noconfirm"
         
-        # Install SDL2 and SDL2_ttf via MSYS2/pacman
-        bash -lc "pacman -S --noconfirm mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf"
+        # Update MSYS2 system packages first
+        bash -lc "pacman -S --noconfirm pacman"
+        
+        # Install core tools and SDL2 libraries
+        bash -lc "pacman -S --noconfirm pkg-config mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf"
         
         # Show installed packages
         bash -lc "pacman -Q | grep SDL"
@@ -60,8 +63,17 @@ jobs:
         $env:PKG_CONFIG_PATH = "C:\tools\msys64\mingw64\lib\pkgconfig"
         echo "PKG_CONFIG_PATH=C:\tools\msys64\mingw64\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         
-        # Verify pkg-config can find SDL2
-        bash -lc "pkg-config --cflags --libs sdl2 sdl2_ttf"
+        # Verify pkg-config is available and can find SDL2
+        echo "Checking for pkg-config..."
+        bash -lc "which pkg-config || echo 'pkg-config not found'"
+        bash -lc "type pkg-config || echo 'pkg-config not found'"
+        
+        echo "Checking pkg-config version..."
+        bash -lc "pkg-config --version || echo 'pkg-config command failed'"
+        
+        echo "Checking SDL2 libraries with pkg-config..."
+        bash -lc "pkg-config --cflags --libs sdl2 || echo 'sdl2 not found by pkg-config'"
+        bash -lc "pkg-config --cflags --libs SDL2_ttf || echo 'SDL2_ttf not found by pkg-config'"
     
     - name: Install dependencies
       env:

@@ -40,7 +40,10 @@ jobs:
         # Move SDL2 files to the correct structure from the devel package
         copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/bin/*.dll C:/SDL2/lib/x64/
         copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/lib/*.lib C:/SDL2/lib/x64/
-        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/
+        
+        # Create proper include directory structure for SDL2
+        mkdir -p C:/SDL2/include/SDL2
+        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/SDL2/
         
         # Download and extract SDL2_ttf development files
         curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-devel-2.20.2-mingw.zip -o SDL2_ttf-devel.zip
@@ -53,12 +56,22 @@ jobs:
         # Move SDL2_ttf files to the correct structure from the devel package
         copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/bin/*.dll C:/SDL2/lib/x64/
         copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/lib/*.lib C:/SDL2/lib/x64/ 
-        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/
+        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/SDL2/
         
         # Check SDL directory structure
         dir C:/SDL2
         dir C:/SDL2/lib/x64
         dir C:/SDL2/include
+        dir C:/SDL2/include/SDL2
+        
+        # Check for SDL_ttf.h specifically
+        if (Test-Path C:/SDL2/include/SDL2/SDL_ttf.h) {
+            echo "Found SDL_ttf.h at expected location"
+        } else {
+            echo "ERROR: SDL_ttf.h not found at C:/SDL2/include/SDL2/SDL_ttf.h"
+            echo "Current content of SDL2/include/SDL2 directory:"
+            Get-ChildItem C:/SDL2/include/SDL2 | select Name
+        }
         
         # Add SDL2 to path for build tools to find
         echo "C:/SDL2/lib/x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -71,6 +84,10 @@ jobs:
         # Configure LD_LIBRARY_PATH to find the SDL2 dlls
         LD_LIBRARY_PATH: C:/SDL2/lib/x64
       run: |
+        # Check what's in the include directories
+        dir C:/SDL2/include
+        dir C:/SDL2/include/SDL2
+        
         # Create a cabal configuration for building SDL2 without pkgconfig
         echo "package sdl2" > cabal.project.local
         echo "  flags: -pkgconfig" >> cabal.project.local
@@ -78,12 +95,31 @@ jobs:
         echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
         
         echo "package sdl2-ttf" >> cabal.project.local
+        echo "  flags: -pkgconfig" >> cabal.project.local
         echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
         echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+        
+        # Look at the cabal.project.local file to verify
+        type cabal.project.local
         
         # Install dependencies
         cabal install --lib UISF
         cabal install --lib HSoM
+        
+        # Download and patch sdl2-ttf Haskell package
+        git clone https://github.com/haskell-game/sdl2-ttf.git
+        cd sdl2-ttf
+        # Change Types.hsc to look for SDL_ttf.h instead of SDL2/SDL_ttf.h
+        $typesFile = Get-Content -Path "src/SDL/TTF/Types.hsc" -Raw
+        $updatedTypes = $typesFile -replace '#include "SDL2/SDL_ttf.h"', '#include "SDL_ttf.h"'
+        Set-Content -Path "src/SDL/TTF/Types.hsc" -Value $updatedTypes
+        
+        # Show difference
+        echo "Original include was: #include ""SDL2/SDL_ttf.h"""
+        echo "Updated include is: #include ""SDL_ttf.h"""
+        
+        # Install the patched version
+        cabal install --lib --extra-include-dirs=C:/SDL2/include/SDL2 --extra-lib-dirs=C:/SDL2/lib/x64
     
     - name: Build
       env:
@@ -92,7 +128,13 @@ jobs:
         SDL2_INCLUDE_DIR: C:/SDL2/include
         LD_LIBRARY_PATH: C:/SDL2/lib/x64
       # The cabal.project.local file created earlier is used here
-      run: cabal build
+      run: |
+        # Additional environment variables to help find the headers
+        $env:C_INCLUDE_PATH = "C:/SDL2/include"
+        $env:CPLUS_INCLUDE_PATH = "C:/SDL2/include"
+        
+        # Run the build with verbose output to see compiler commands
+        cabal build -v3
     
     - name: Create executable directory
       run: |

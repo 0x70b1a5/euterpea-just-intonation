@@ -79,16 +79,20 @@ jobs:
       env:
         PKG_CONFIG_PATH: C:\tools\msys64\mingw64\lib\pkgconfig
       run: |
-        # Create a cabal configuration for building with pkgconfig
-        echo "package sdl2" > cabal.project.local
-        echo "  flags: pkgconfig" >> cabal.project.local
-        echo "  extra-lib-dirs: C:\tools\msys64\mingw64\lib" >> cabal.project.local
-        echo "  extra-include-dirs: C:\tools\msys64\mingw64\include" >> cabal.project.local
-        
-        echo "package sdl2-ttf" >> cabal.project.local
-        echo "  flags: pkgconfig" >> cabal.project.local
-        echo "  extra-lib-dirs: C:\tools\msys64\mingw64\lib" >> cabal.project.local
-        echo "  extra-include-dirs: C:\tools\msys64\mingw64\include" >> cabal.project.local
+        # Create a cabal configuration for building with pkgconfig - using proper formatting
+        Set-Content -Path cabal.project.local -Value @"
+packages: .
+
+package sdl2
+  flags: +pkgconfig
+  extra-lib-dirs: C:\tools\msys64\mingw64\lib
+  extra-include-dirs: C:\tools\msys64\mingw64\include
+
+package sdl2-ttf
+  flags: +pkgconfig
+  extra-lib-dirs: C:\tools\msys64\mingw64\lib
+  extra-include-dirs: C:\tools\msys64\mingw64\include
+"@
         
         # Look at the cabal.project.local file to verify
         type cabal.project.local

@@ -9,139 +9,95 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Using Linux with Nix for cross-compilation instead of Windows
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     
-    - name: Setup Haskell
-      uses: haskell-actions/setup@v2
+    - name: Install Nix
+      uses: cachix/install-nix-action@v23
       with:
-        ghc-version: '9.4.8'
-        cabal-version: '3.10.2.0'
+        nix_path: nixpkgs=channel:nixos-unstable
+        extra_nix_config: |
+          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+          substituters = https://cache.nixos.org/ https://hydra.iohk.io
     
-    - name: Update Cabal package list
-      run: cabal update
+    - name: Setup Cachix
+      uses: cachix/cachix-action@v12
+      with:
+        name: iohk
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     
-    - name: Install MSYS2 and SDL2 libraries
+    - name: Create default.nix for building
       run: |
-        # Install Chocolatey if not already installed
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        try {
-            choco -v
-            echo "Chocolatey is already installed"
-        } catch {
-            echo "Installing Chocolatey..."
-            iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        cat > default.nix << 'EOF'
+        { pkgs ? import <nixpkgs> {} }:
+
+        let
+          haskellPackages = pkgs.haskellPackages.override {
+            overrides = self: super: {
+              # Dependencies from Hackage
+              UISF = self.callHackage "UISF" "0.4.0.0" {};
+              HSoM = self.callHackage "HSoM" "1.0.0" {};
+              
+              # Our project
+              euterpea2-project = self.callCabal2nix "euterpea2-project" ./. {};
+            };
+          };
+          
+          # Build Windows version
+          windowsPackages = pkgs.pkgsCross.mingwW64.haskellPackages.override {
+            overrides = self: super: {
+              # Dependencies from Hackage
+              UISF = self.callHackage "UISF" "0.4.0.0" {};
+              HSoM = self.callHackage "HSoM" "1.0.0" {};
+              
+              # Our project, adding SDL2 dependencies
+              euterpea2-project = (self.callCabal2nix "euterpea2-project" ./. {}).overrideAttrs (oldAttrs: {
+                buildInputs = (oldAttrs.buildInputs or []) ++ [ 
+                  pkgs.pkgsCross.mingwW64.SDL2
+                  pkgs.pkgsCross.mingwW64.SDL2_ttf 
+                ];
+              });
+            };
+          };
+          
+          # Create Windows distributable package
+          windowsDistributable = pkgs.stdenv.mkDerivation {
+            name = "JustIntonationMusic-windows";
+            src = ./.;
+            buildInputs = [
+              windowsPackages.euterpea2-project
+              pkgs.pkgsCross.mingwW64.SDL2
+              pkgs.pkgsCross.mingwW64.SDL2_ttf
+            ];
+            buildPhase = '''';
+            installPhase = ''
+              mkdir -p $out/bin
+              cp ${windowsPackages.euterpea2-project}/bin/euterpea2-project.exe $out/bin/JustIntonationMusic.exe
+              cp ${pkgs.pkgsCross.mingwW64.SDL2}/bin/SDL2.dll $out/bin/
+              cp ${pkgs.pkgsCross.mingwW64.SDL2_ttf}/bin/SDL2_ttf.dll $out/bin/
+              cp $src/WINDOWS_README.md $out/bin/README.md
+            '';
+          };
+        in {
+          inherit haskellPackages;
+          inherit windowsPackages;
+          inherit windowsDistributable;
+          windows = windowsDistributable;
         }
-        
-        # Install MSYS2
-        choco install msys2 -y
-        
-        # Update MSYS2 packages
-        $env:PATH = "C:\tools\msys64\usr\bin;C:\tools\msys64\mingw64\bin;$env:PATH"
-        bash -lc "pacman -Syu --noconfirm"
-        
-        # Update MSYS2 system packages first
-        bash -lc "pacman -S --noconfirm pacman"
-        
-        # Install core tools and SDL2 libraries
-        bash -lc "pacman -S --noconfirm pkg-config mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf"
-        
-        # Show installed packages
-        bash -lc "pacman -Q | grep SDL"
-        
-        # Set up environment variables
-        $env:PATH = "C:\tools\msys64\mingw64\bin;$env:PATH"
-        echo "C:\tools\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-        # List SDL2 files
-        dir C:\tools\msys64\mingw64\bin\SDL2*.dll
-        dir C:\tools\msys64\mingw64\include\SDL2
-        
-        # Set up pkg-config
-        $env:PKG_CONFIG_PATH = "C:\tools\msys64\mingw64\lib\pkgconfig"
-        echo "PKG_CONFIG_PATH=C:\tools\msys64\mingw64\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        
-        # Verify pkg-config is available and can find SDL2
-        echo "Checking for pkg-config..."
-        bash -lc "which pkg-config || echo 'pkg-config not found'"
-        bash -lc "type pkg-config || echo 'pkg-config not found'"
-        
-        echo "Checking pkg-config version..."
-        bash -lc "pkg-config --version || echo 'pkg-config command failed'"
-        
-        echo "Checking SDL2 libraries with pkg-config..."
-        bash -lc "pkg-config --cflags --libs sdl2 || echo 'sdl2 not found by pkg-config'"
-        bash -lc "pkg-config --cflags --libs SDL2_ttf || echo 'SDL2_ttf not found by pkg-config'"
+        EOF
     
-    - name: Install dependencies
-      env:
-        PKG_CONFIG_PATH: C:\tools\msys64\mingw64\lib\pkgconfig
+    - name: Build with Nix
       run: |
-        # Create a cabal configuration for building with pkgconfig - using proper formatting
-        Set-Content -Path cabal.project.local -Value @"
-packages: .
-
-package sdl2
-  flags: +pkgconfig
-  extra-lib-dirs: C:\tools\msys64\mingw64\lib
-  extra-include-dirs: C:\tools\msys64\mingw64\include
-
-package sdl2-ttf
-  flags: +pkgconfig
-  extra-lib-dirs: C:\tools\msys64\mingw64\lib
-  extra-include-dirs: C:\tools\msys64\mingw64\include
-"@
+        # Build the Windows distributable package
+        nix-build -A windows
+    
+    - name: Create distribution directory
+      run: |
+        mkdir -p dist/windows
+        cp -r result/bin/* dist/windows/
         
-        # Look at the cabal.project.local file to verify
-        type cabal.project.local
-        
-        # Install dependencies
-        cabal install --lib UISF
-        cabal install --lib HSoM
-    
-    - name: Build
-      env:
-        PKG_CONFIG_PATH: C:\tools\msys64\mingw64\lib\pkgconfig
-        PATH: C:\tools\msys64\mingw64\bin;${{env.PATH}}
-      # The cabal.project.local file created earlier is used here
-      run: |
-        # Additional environment variables to help find the headers
-        $env:C_INCLUDE_PATH = "C:\tools\msys64\mingw64\include"
-        $env:CPLUS_INCLUDE_PATH = "C:\tools\msys64\mingw64\include"
-        
-        # Run the build
-        cabal build
-    
-    - name: Create executable directory
-      run: |
-        mkdir dist 2>nul || echo "dist already exists"
-        mkdir dist\windows 2>nul || echo "dist\windows already exists"
-    
-    - name: Install executable
-      env:
-        SDL2_DIR: C:/SDL2
-        SDL2_LIB_DIR: C:/SDL2/lib/x64
-        SDL2_INCLUDE_DIR: C:/SDL2/include
-        LD_LIBRARY_PATH: C:/SDL2/lib/x64
-      # The cabal.project.local file created earlier is used here
-      run: cabal install --installdir=dist/windows exe:euterpea2-project
-    
-    - name: Rename executable
-      run: |
-        cd dist/windows
-        ren euterpea2-project.exe JustIntonationMusic.exe
-    
-    - name: Copy DLL dependencies
-      run: |
-        # Copy all SDL2 DLLs
-        dir C:\tools\msys64\mingw64\bin\SDL2*.dll
-        copy C:\tools\msys64\mingw64\bin\SDL2*.dll dist\windows\
-    
-    - name: Copy README
-      run: copy WINDOWS_README.md dist/windows/README.md
-    
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:

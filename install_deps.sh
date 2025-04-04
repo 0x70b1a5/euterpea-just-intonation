@@ -1,14 +1,36 @@
 #!/bin/bash
 
-# This script has been renamed to reflect its updated purpose
-# It now provides information about the project's dependencies
+# This script installs dependencies for building the project
+# including cross-compilation to Windows
 
-echo "NOTE: This project no longer uses SDL dependencies."
-echo "The tracker now uses a web-based interface with threepenny-gui."
-echo "No additional dependencies are required beyond what cabal will install."
-echo ""
-echo "To build the project, simply run:"
-echo "  cabal build"
-echo ""
-echo "To run the application:"
-echo "  cabal run"
+echo "Installing dependencies for building Just Intonation Music Generator"
+echo "=================================================================="
+
+# Install Haskell packages
+echo "Installing Haskell dependencies..."
+cabal update
+cabal install --lib Euterpea
+cabal install --lib HSoM
+cabal install --lib UISF
+
+# Setup Cabal config for cross-compilation
+echo "Setting up cross-compilation environment..."
+mkdir -p ~/.cabal
+cat > ~/.cabal/config << EOF
+repository hackage.haskell.org
+  url: http://hackage.haskell.org/
+  secure: True
+
+remote-repo-cache: $HOME/.cabal/packages
+world-file: $HOME/.cabal/world
+extra-prog-path: $HOME/.cabal/bin
+build-summary: $HOME/.cabal/logs/build.log
+remote-build-reporting: anonymous
+jobs: \$ncpus
+
+-- Windows cross-compilation options
+executable-stripping: True
+library-stripping: True
+EOF
+
+echo "Dependencies installed successfully!"

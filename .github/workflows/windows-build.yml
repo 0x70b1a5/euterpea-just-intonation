@@ -9,97 +9,54 @@ on:
 
 jobs:
   build:
-    # Using Linux with Nix for cross-compilation instead of Windows
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
     
-    - name: Install Nix
-      uses: cachix/install-nix-action@v23
+    - name: Set up GHC
+      uses: haskell-actions/setup@v2
       with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        extra_nix_config: |
-          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-          substituters = https://cache.nixos.org/ https://hydra.iohk.io
+        ghc-version: '9.4.8'
+        cabal-version: '3.10.2.0'
     
-    - name: Setup Cachix
-      uses: cachix/cachix-action@v12
-      with:
-        name: iohk
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    
-    - name: Create default.nix for building
+    - name: Install Dependencies
       run: |
-        cat > default.nix << 'EOF'
-        { pkgs ? import <nixpkgs> {} }:
-
-        let
-          haskellPackages = pkgs.haskellPackages.override {
-            overrides = self: super: {
-              # Dependencies from Hackage
-              UISF = self.callHackage "UISF" "0.4.0.0" {};
-              HSoM = self.callHackage "HSoM" "1.0.0" {};
-              
-              # Our project
-              euterpea2-project = self.callCabal2nix "euterpea2-project" ./. {};
-            };
-          };
-          
-          # Build Windows version
-          windowsPackages = pkgs.pkgsCross.mingwW64.haskellPackages.override {
-            overrides = self: super: {
-              # Dependencies from Hackage
-              UISF = self.callHackage "UISF" "0.4.0.0" {};
-              HSoM = self.callHackage "HSoM" "1.0.0" {};
-              
-              # Our project, adding SDL2 dependencies
-              euterpea2-project = (self.callCabal2nix "euterpea2-project" ./. {}).overrideAttrs (oldAttrs: {
-                buildInputs = (oldAttrs.buildInputs or []) ++ [ 
-                  pkgs.pkgsCross.mingwW64.SDL2
-                  pkgs.pkgsCross.mingwW64.SDL2_ttf 
-                ];
-              });
-            };
-          };
-          
-          # Create Windows distributable package
-          windowsDistributable = pkgs.stdenv.mkDerivation {
-            name = "JustIntonationMusic-windows";
-            src = ./.;
-            buildInputs = [
-              windowsPackages.euterpea2-project
-              pkgs.pkgsCross.mingwW64.SDL2
-              pkgs.pkgsCross.mingwW64.SDL2_ttf
-            ];
-            buildPhase = '''';
-            installPhase = ''
-              mkdir -p $out/bin
-              cp ${windowsPackages.euterpea2-project}/bin/euterpea2-project.exe $out/bin/JustIntonationMusic.exe
-              cp ${pkgs.pkgsCross.mingwW64.SDL2}/bin/SDL2.dll $out/bin/
-              cp ${pkgs.pkgsCross.mingwW64.SDL2_ttf}/bin/SDL2_ttf.dll $out/bin/
-              cp $src/WINDOWS_README.md $out/bin/README.md
-            '';
-          };
-        in {
-          inherit haskellPackages;
-          inherit windowsPackages;
-          inherit windowsDistributable;
-          windows = windowsDistributable;
-        }
-        EOF
+        sudo apt-get update
+        sudo apt-get install -y mingw-w64 zip
+        # Install dependencies for cross-compilation
+        bash ./install_deps.sh
     
-    - name: Build with Nix
+    - name: Build Windows Executable
       run: |
-        # Build the Windows distributable package
-        nix-build -A windows
+        # Make the build script executable
+        chmod +x ./build-windows.sh
+        # Run the build script
+        ./build-windows.sh
+        
+    - name: Create Windows Package
+      run: |
+        cd dist/windows
+        zip -r ../../JustIntonationMusic.zip *
+        cd ../..
     
-    - name: Create distribution directory
+    - name: Build Web Version
       run: |
-        mkdir -p dist/windows
-        cp -r result/bin/* dist/windows/
+        # Make the build script executable
+        chmod +x ./build-windows-web.sh
+        # Build the web version
+        ./build-windows-web.sh
+        # Copy web version to distribution
+        cp ./just-intonation-tracker-web.exe dist/windows/
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: JustIntonationMusic
         path: dist/windows/
+        
+    - name: Upload ZIP artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: JustIntonationMusic-ZIP
+        path: JustIntonationMusic.zip

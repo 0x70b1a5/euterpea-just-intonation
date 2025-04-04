@@ -123,7 +123,7 @@ jobs:
         echo "Updated include is: #include ""SDL2/SDL_ttf.h"""
         
         # Install the patched version
-        cabal install --lib --extra-include-dirs=C:/SDL2/include/SDL2 --extra-lib-dirs=C:/SDL2/lib/x64
+        cabal install --lib . --extra-include-dirs=C:/SDL2/include --extra-lib-dirs=C:/SDL2/lib/x64
     
     - name: Build
       env:

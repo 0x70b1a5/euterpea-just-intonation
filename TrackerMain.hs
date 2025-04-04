@@ -14,12 +14,13 @@ import System.Exit (exitSuccess, ExitCode(ExitSuccess))
 import Control.Exception (catch, SomeException, throwIO)
 import System.Process (system)
 import System.IO.Temp (withSystemTempFile)
+import System.Info (os) -- Used to detect OS
 -- Use JustIntonationCore instead of Main
 import JustIntonationCore
 import TrackerTypes
 import TrackerParser
 import TrackerToMusic
-import qualified TrackerSDL
+import qualified TrackerWeb
 
 -- | Display tracker file information
 displayTrackerInfo :: TrackerFile -> IO ()
@@ -232,12 +233,19 @@ initTrackerState tf path = TrackerState {
   bottomBarExpanded = False  -- Start with collapsed bottom bar
 }
 
+-- | Safe wrapper for terminal operations on Windows
+safeTerminalOp :: IO () -> IO ()
+safeTerminalOp op = 
+  if isWindows
+    then return () -- On Windows, just skip the terminal operation
+    else op
+
 -- | Draw the tracker grid in the terminal
 drawTrackerGrid :: TrackerState -> IO ()
 drawTrackerGrid state = do
   -- Clear screen and move cursor to top-left
-  clearScreen
-  setCursorPosition 0 0
+  unless isWindows $ clearScreen
+  unless isWindows $ setCursorPosition 0 0
   
   -- Get tracker file and dimensions
   let tf = trackerFile state
@@ -246,18 +254,18 @@ drawTrackerGrid state = do
       curPos = cursorPos state
   
   -- Draw header and status bar
-  setSGR [SetColor Foreground Vivid White, SetColor Background Vivid Blue]
+  unless isWindows $ setSGR [SetColor Foreground Vivid White, SetColor Background Vivid Blue]
   putStrLn $ " Just Intonation Tracker " ++ replicate 50 ' ' ++ " "
-  setSGR [Reset]
+  unless isWindows $ setSGR [Reset]
   
   -- Display captured values and basic info
-  setSGR [SetColor Foreground Vivid Yellow]
+  unless isWindows $ setSGR [SetColor Foreground Vivid Yellow]
   putStrLn $ " Base Freq: " ++ show (baseFrequency tf) ++ " Hz | " ++
              "Base Tempo: " ++ show (baseTempo tf) ++ " BPM | " ++
              "Rows/Beat: " ++ show (rowsPerBeat tf) ++ " | " ++
              "Captured Freq: " ++ show (capturedFreq state) ++ " Hz | " ++
              "Captured Tempo: " ++ show (capturedTempo state) ++ " BPM"
-  setSGR [Reset]
+  unless isWindows $ setSGR [Reset]
   
   -- Draw column headers
   putStr " Row | Tempo "
@@ -277,7 +285,7 @@ drawTrackerGrid state = do
   
   -- Draw status bar at the bottom
   setCursorPosition (rows + 5) 0
-  setSGR [SetColor Foreground Vivid White, SetColor Background Vivid Blue]
+  unless isWindows $ setSGR [SetColor Foreground Vivid White, SetColor Background Vivid Blue]
   putStrLn $ " " ++ statusMessage state ++ replicate (70 - length (statusMessage state)) ' ' ++ " "
   
   -- Draw keyboard shortcuts at the bottom
@@ -285,10 +293,10 @@ drawTrackerGrid state = do
     then do
       -- Draw expanded keyboard shortcuts
       setCursorPosition (rows + 6) 0
-      setSGR [SetColor Foreground Vivid Cyan, SetColor Background Dull Black]
+      unless isWindows $ setSGR [SetColor Foreground Vivid Cyan, SetColor Background Dull Black]
       putStrLn $ " [↑,↓,←,→]: Navigate | [Enter]: Edit | [Esc]: Cancel | [S]: Save | [E]: Export | [Space]: Play "
       setCursorPosition (rows + 7) 0
-      putStrLn $ " [Q]: Quit | [?]: Help | [A]: Add Row | [D]: Delete Row | [Shift+Arrows]: Select | [C]: Copy/Capture | [V]: Paste "
+      putStrLn $ " [Q]: Quit | [?]: Help | [a]: Add Row | [d]: Delete Row | [A]: Add Chan | [D]: Delete Chan | [C]: Copy/Capture | [V]: Paste "
       setCursorPosition (rows + 8) 0
       putStrLn $ " [T,N,I,V,F]: Jump to Field Types (Tempo, Note, Instrument, Volume, Effects) | [C] (no selection): Capture "
       setCursorPosition (rows + 9) 0
@@ -296,22 +304,23 @@ drawTrackerGrid state = do
     else do
       -- Draw collapsed keyboard shortcuts
       setCursorPosition (rows + 6) 0
-      setSGR [SetColor Foreground Vivid Cyan, SetColor Background Dull Black]
+      unless isWindows $ setSGR [SetColor Foreground Vivid Cyan, SetColor Background Dull Black]
       putStrLn $ " [/]: Show help | [Space]: Play "
   
-  setSGR [Reset]
+  unless isWindows $ setSGR [Reset]
   
   -- Position cursor at edit location if editing
-  if isEditing state
-    then do
-      let row = cursorRow curPos + 3  -- Adjust for header rows
-      let col = getFieldColPosition curPos cols
-      setCursorPosition row col
-    else do
-      -- Otherwise position cursor at the current cell
-      let row = cursorRow curPos + 3  -- Adjust for header rows
-      let col = getFieldColPosition curPos cols
-      setCursorPosition row col
+  unless isWindows $ do
+    if isEditing state
+      then do
+        let row = cursorRow curPos + 3  -- Adjust for header rows
+        let col = getFieldColPosition curPos cols
+        setCursorPosition row col
+      else do
+        -- Otherwise position cursor at the current cell
+        let row = cursorRow curPos + 3  -- Adjust for header rows
+        let col = getFieldColPosition curPos cols
+        setCursorPosition row col
 
 -- | Get the actual column position for the cursor
 getFieldColPosition :: CursorPos -> Int -> Int
@@ -340,8 +349,11 @@ formatRow row rowIdx cols (curPos, state) =
     fullRow = rowNumStr ++ tempoStr ++ concat chanStrs
   in
     -- Highlight the current row if the cursor is on it
-    if rowIdx == cursorRow curPos
-      then setSGRCode [SetColor Background Dull Blue] ++ fullRow ++ setSGRCode [Reset]
+    if isWindows then
+      -- On Windows, don't use ANSI codes
+      fullRow
+    else if rowIdx == cursorRow curPos
+      then safeSGRCode [SetColor Background Dull Blue] ++ fullRow ++ safeSGRCode [Reset]
       else fullRow
 
 -- | Format the tempo cell
@@ -362,18 +374,23 @@ formatTempoCell row rowIdx chanIdx field state =
                      
       -- Check if this cell is in the selection
       isSelected = isInSelection rowIdx 0 field state
+      
+      paddedContent = tempoCellContent ++ padding
   in
-    if isCursorHere
-      then setSGRCode [SetColor Foreground Vivid Yellow, SetColor Background Dull Magenta] ++ 
-           tempoCellContent ++ padding ++ 
-           setSGRCode [Reset, SetColor Background Dull Blue]
+    if isWindows then
+      -- On Windows, don't use ANSI codes
+      paddedContent
+    else if isCursorHere
+      then safeSGRCode [SetColor Foreground Vivid Yellow, SetColor Background Dull Magenta] ++ 
+           paddedContent ++ 
+           safeSGRCode [Reset, SetColor Background Dull Blue]
     else if isSelected
-      then setSGRCode [SetColor Foreground Vivid Yellow, SetColor Background Dull Cyan] ++ 
-           tempoCellContent ++ padding ++ 
-           setSGRCode [Reset]
-      else setSGRCode [SetColor Foreground Vivid Yellow] ++ 
-           tempoCellContent ++ padding ++ 
-           setSGRCode [Reset]
+      then safeSGRCode [SetColor Foreground Vivid Yellow, SetColor Background Dull Cyan] ++ 
+           paddedContent ++ 
+           safeSGRCode [Reset]
+      else safeSGRCode [SetColor Foreground Vivid Yellow] ++ 
+           paddedContent ++ 
+           safeSGRCode [Reset]
 
 -- | Format cells for a channel
 formatChannelCells :: TrackerRow -> Int -> Int -> TrackerState -> String
@@ -430,6 +447,17 @@ formatChannelCells row chanIdx rowIdx state =
     formatCellWithSelection volStr 3 isVolHighlighted isVolSelected Vivid Green ++ " " ++
     formatCellWithSelection fxStr 2 isFxHighlighted isFxSelected Vivid Magenta
 
+-- | Helper function to check if we're on Windows
+isWindows :: Bool
+isWindows = os == "mingw32"
+
+-- | Safe wrapper for setSGRCode that works cross-platform
+safeSGRCode :: [SGR] -> String
+safeSGRCode sgrs = 
+  if isWindows 
+    then "" -- On Windows, just return an empty string to avoid showing ANSI escape codes
+    else setSGRCode sgrs
+
 -- | Format a cell with selection highlighting
 formatCellWithSelection :: String -> Int -> Bool -> Bool -> ColorIntensity -> Color -> String
 formatCellWithSelection content width isHighlighted isSelected intensity color =
@@ -437,7 +465,10 @@ formatCellWithSelection content width isHighlighted isSelected intensity color =
     padding = replicate (width - length content) ' '
     paddedContent = content ++ padding
   in
-    if isHighlighted
+    if isWindows then
+      -- On Windows, don't use ANSI codes
+      paddedContent
+    else if isHighlighted
       then setSGRCode [SetColor Foreground intensity color, SetColor Background Dull Magenta] ++ 
            paddedContent ++ 
            setSGRCode [Reset, SetColor Background Dull Blue]
@@ -768,6 +799,12 @@ handleNavigationModeInput state c =
     
     'd' -> -- Delete current row
       deleteRow state
+      
+    'A' -> -- Add channel
+      addChannel state
+    
+    'D' -> -- Delete channel
+      removeChannel state
     
     -- Arrow keys navigation (special handling for escape sequences)
     '\ESC' -> do
@@ -1185,6 +1222,81 @@ getCellContent tf row colIndex =
             Just cmd -> [cmd] ++ fromMaybe "" (effectValue effect)
             Nothing -> ""
 
+-- | Add a new channel
+addChannel :: TrackerState -> IO ()
+addChannel state = do
+  let tf = trackerFile state
+      currentChannels = numChannels tf
+      
+  -- Don't add too many channels (limit to 8 for reasonable display)
+  if currentChannels >= 8
+    then trackerLoop $ state { statusMessage = "Cannot add more than 8 channels" }
+    else do
+      -- Add a new channel to each row
+      let updatedRows = map addChannelToRow (trackerData tf)
+      
+      -- Update the tracker file
+      let newTf = tf {
+        numChannels = currentChannels + 1,
+        trackerData = updatedRows
+      }
+      
+      -- Return updated state
+      trackerLoop $ state {
+        trackerFile = newTf,
+        statusMessage = "Added new channel " ++ show (currentChannels + 1)
+      }
+  where
+    -- Helper function to add empty channel to a row
+    addChannelToRow row = row {
+      rowChannels = rowChannels row ++ [emptyChannelData]
+    }
+
+-- | Remove the last channel
+removeChannel :: TrackerState -> IO ()
+removeChannel state = do
+  let tf = trackerFile state
+      currentChannels = numChannels tf
+      curPos = cursorPos state
+      
+  -- Don't remove the last channel
+  if currentChannels <= 1
+    then trackerLoop $ state { statusMessage = "Cannot remove the last channel" }
+    else do
+      -- Ask for confirmation
+      unless isWindows $ clearScreen
+      unless isWindows $ setCursorPosition 0 0
+      putStrLn $ "Remove channel " ++ show currentChannels ++ "? (y/n)"
+      
+      c <- getChar
+      if c == 'y' || c == 'Y'
+        then do
+          -- Remove the last channel from each row
+          let updatedRows = map removeLastChannelFromRow (trackerData tf)
+          
+          -- Update the tracker file
+          let newTf = tf {
+            numChannels = currentChannels - 1,
+            trackerData = updatedRows
+          }
+          
+          -- Adjust cursor if needed
+          let adjustedCol = min (cursorCol curPos) (currentChannels - 2)
+              newCurPos = curPos { cursorCol = adjustedCol }
+          
+          -- Return updated state
+          trackerLoop $ state {
+            trackerFile = newTf,
+            cursorPos = newCurPos,
+            statusMessage = "Removed channel " ++ show currentChannels
+          }
+        else trackerLoop $ state { statusMessage = "Channel removal cancelled" }
+  where
+    -- Helper function to remove the last channel from a row
+    removeLastChannelFromRow row = row {
+      rowChannels = take (length (rowChannels row) - 1) (rowChannels row)
+    }
+
 -- | Jump to a specific field type
 jumpToField :: TrackerState -> Field -> IO ()
 jumpToField state field = do
@@ -1213,8 +1325,8 @@ saveTrackerFile state =
     
     Nothing -> do
       -- Ask for a file path
-      clearScreen
-      setCursorPosition 0 0
+      unless isWindows $ clearScreen
+      unless isWindows $ setCursorPosition 0 0
       putStrLn "Enter file path to save: "
       newPath <- getLine
       
@@ -1229,8 +1341,8 @@ saveTrackerFile state =
 exportToWav :: TrackerState -> IO ()
 exportToWav state = do
   -- Ask for output file and duration
-  clearScreen
-  setCursorPosition 0 0
+  unless isWindows $ clearScreen
+  unless isWindows $ setCursorPosition 0 0
   putStrLn "Enter output WAV file path: "
   outputPath <- getLine
   putStrLn "Enter duration in seconds: "
@@ -1252,8 +1364,8 @@ renderAndPlay state = do
     hClose tempHandle
     
     -- Set status while rendering
-    clearScreen
-    setCursorPosition 0 0
+    unless isWindows $ clearScreen
+    unless isWindows $ setCursorPosition 0 0
     putStrLn "Rendering audio preview..."
     
     -- Default duration of 5 seconds
@@ -1354,33 +1466,42 @@ deleteRow state = do
   if currentRows <= 1
     then trackerLoop $ state { statusMessage = "Cannot delete the last row" }
     else do
-      -- Remove the current row
-      let newRows = take rowIdx rows ++ drop (rowIdx + 1) rows
-          
-          -- Update the tracker file with new rows
-          newTf = tf { 
-            trackerData = newRows,
-            numRows = currentRows - 1
-          }
-          
-          -- Adjust cursor position if needed
-          newRowIdx = if rowIdx >= currentRows - 1 
-                      then rowIdx - 1  -- Move cursor up if deleting last row
-                      else rowIdx      -- Keep cursor at same position
-          newCurPos = (cursorPos state) { cursorRow = newRowIdx }
+      -- Ask for confirmation
+      unless isWindows $ clearScreen
+      unless isWindows $ setCursorPosition 0 0
+      putStrLn $ "Delete row " ++ show rowIdx ++ "? (y/n)"
       
-      -- Update state with new tracker file and status
-      trackerLoop $ state {
-        trackerFile = newTf,
-        cursorPos = newCurPos,
-        statusMessage = "Row deleted at position " ++ show rowIdx
-      }
+      c <- getChar
+      if c == 'y' || c == 'Y'
+        then do
+          -- Remove the current row
+          let newRows = take rowIdx rows ++ drop (rowIdx + 1) rows
+              
+              -- Update the tracker file with new rows
+              newTf = tf { 
+                trackerData = newRows,
+                numRows = currentRows - 1
+              }
+              
+              -- Adjust cursor position if needed
+              newRowIdx = if rowIdx >= currentRows - 1 
+                          then rowIdx - 1  -- Move cursor up if deleting last row
+                          else rowIdx      -- Keep cursor at same position
+              newCurPos = (cursorPos state) { cursorRow = newRowIdx }
+          
+          -- Update state with new tracker file and status
+          trackerLoop $ state {
+            trackerFile = newTf,
+            cursorPos = newCurPos,
+            statusMessage = "Row deleted at position " ++ show rowIdx
+          }
+        else trackerLoop $ state { statusMessage = "Row deletion cancelled" }
 
 -- | Show help screen
 showHelp :: TrackerState -> IO ()
 showHelp state = do
-  clearScreen
-  setCursorPosition 0 0
+  unless isWindows $ clearScreen
+  unless isWindows $ setCursorPosition 0 0
   putStrLn "Just Intonation Tracker - Help"
   putStrLn "============================"
   putStrLn "Navigation:"
@@ -1401,7 +1522,9 @@ showHelp state = do
   putStrLn "  e - Export to WAV"
   putStrLn "  c - Capture frequency/tempo value"
   putStrLn "  a - Add row at current position"
-  putStrLn "  d - Delete current row"
+  putStrLn "  d - Delete current row (with confirmation)"
+  putStrLn "  A - Add channel"
+  putStrLn "  D - Delete channel (with confirmation)"
   putStrLn "  q - Quit"
   putStrLn "  ? / h - Show this help"
   
@@ -1431,8 +1554,8 @@ showHelp state = do
 exitTracker :: TrackerState -> IO ()
 exitTracker state = do
   -- Ask for confirmation if there are unsaved changes
-  clearScreen
-  setCursorPosition 0 0
+  unless isWindows $ clearScreen
+  unless isWindows $ setCursorPosition 0 0
   putStrLn "Exit tracker? (y/n)"
   
   c <- getChar
@@ -1478,9 +1601,9 @@ trackerMenu = do
   -- Reset terminal settings
   hSetBuffering stdin LineBuffering
   hSetEcho stdin True
-  setSGR [Reset]
-  clearScreen
-  setCursorPosition 0 0
+  unless isWindows $ setSGR [Reset]
+  unless isWindows $ clearScreen
+  unless isWindows $ setCursorPosition 0 0
   
   putStrLn "========================================"
   putStrLn "Just Intonation Tracker"
@@ -1488,8 +1611,8 @@ trackerMenu = do
   putStrLn "Choose an option:"
   putStrLn "1. Open terminal tracker with new file"
   putStrLn "2. Open terminal tracker with existing file"
-  putStrLn "3. Open SDL tracker with new file"
-  putStrLn "4. Open SDL tracker with existing file"
+  putStrLn "3. Open Web tracker with new file (recommended)"
+  putStrLn "4. Open Web tracker with existing file (recommended)"
   putStrLn "5. Load and render tracker file"
   putStrLn "6. Display tracker file information"
   putStrLn "7. Create example tracker file"
@@ -1565,8 +1688,8 @@ trackerMenu = do
       let tf = initTrackerFile baseFreq tempo rowsPerBeat numRows numChannels
       writeTrackerFile filePath tf
       
-      -- Open in SDL tracker
-      TrackerSDL.startSDLTracker (Just filePath)
+      -- Open in Web tracker
+      TrackerWeb.startWebTracker (Just filePath)
       trackerMenu
     
     "4" -> do
@@ -1578,8 +1701,8 @@ trackerMenu = do
           putStrLn $ "Error: File not found: " ++ filePath
           trackerMenu
         else do
-          -- Open in SDL tracker
-          TrackerSDL.startSDLTracker (Just filePath)
+          -- Open in Web tracker
+          TrackerWeb.startWebTracker (Just filePath)
           trackerMenu
     
     "5" -> do

@@ -9,7 +9,7 @@ import Euterpea
 import JustIntonationCore
 import qualified Main
 import qualified TrackerMain
-import qualified TrackerSDL
+import qualified TrackerWeb
 import ErrorHandler
 import Control.Exception (catch, SomeException)
 
@@ -63,7 +63,7 @@ mainGUIWithErrorHandling = do
   putStrLn "3. Generate Minor Arpeggio"
   putStrLn "4. Generate Just Scale" 
   putStrLn "5. Open Terminal Tracker Interface"
-  putStrLn "6. Open SDL Tracker Interface"
+  putStrLn "6. Open Web Tracker Interface"
   putStrLn "7. Exit"
   putStrLn "========================================"
   putStrLn "Enter your choice (1-7): "
@@ -140,8 +140,9 @@ mainGUIWithErrorHandling = do
       mainGUIWithErrorHandling
     
     "6" -> do
-      putStrLn "Opening SDL Tracker interface..."
-      TrackerSDL.startSDLTracker Nothing
+      putStrLn "Opening Web Tracker interface..."
+      putStrLn "A browser window will open automatically at http://localhost:8023"
+      TrackerWeb.startWebTracker Nothing
       waitForKeypress
       mainGUIWithErrorHandling
       

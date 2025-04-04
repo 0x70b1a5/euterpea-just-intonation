@@ -23,10 +23,10 @@ executable euterpea2-project
                       TrackerParser,
                       TrackerToMusic,
                       TrackerMain,
-                      TrackerSDL,
+                      TrackerWeb,
                       ErrorHandler
-    -- Exclude unused web interface
-    -- other-modules:    TrackerWeb
+    -- Exclude unused SDL interface
+    -- other-modules:    TrackerSDL
     build-depends:    base ^>=4.12.0.0,
                       Euterpea,
                       HSoM,
@@ -38,13 +38,37 @@ executable euterpea2-project
                       process,
                       ansi-terminal,
                       temporary,
-                      sdl2,
-                      sdl2-ttf,
                       filepath,
                       time,
                       vector,
                       containers,
-                      linear,
-                      StateVar
+                      threepenny-gui
+    hs-source-dirs:   .
+    default-language: Haskell2010
+
+executable test-web
+    import:           warnings
+    main-is:          TestWeb.hs
+    other-modules:    TrackerTypes,
+                      TrackerParser,
+                      TrackerToMusic,
+                      TrackerWeb,
+                      ErrorHandler,
+                      JustIntonationCore
+    build-depends:    base ^>=4.12.0.0,
+                      Euterpea,
+                      HSoM,
+                      directory,
+                      aeson,
+                      text,
+                      bytestring,
+                      process,
+                      ansi-terminal,
+                      temporary,
+                      filepath,
+                      time,
+                      vector,
+                      containers,
+                      threepenny-gui
     hs-source-dirs:   .
     default-language: Haskell2010

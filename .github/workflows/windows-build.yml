@@ -22,82 +22,61 @@ jobs:
     - name: Update Cabal package list
       run: cabal update
     
-    - name: Download SDL2 libraries
+    - name: Install MSYS2 and SDL2 libraries
       run: |
-        # Create SDL directory
-        mkdir -p C:/SDL2
-        mkdir -p C:/SDL2/lib/x64
-        mkdir -p C:/SDL2/include
-
-        # Download and extract SDL2 development files
-        curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip -o SDL2-devel.zip
-        Expand-Archive -Path SDL2-devel.zip -DestinationPath C:/SDL2_devel_temp -Force
-        
-        # List the extracted content to see structure
-        dir C:/SDL2_devel_temp -Recurse | Select-Object -First 20 FullName | Out-File -FilePath SDL2_structure.txt
-        Get-Content SDL2_structure.txt
-        
-        # Move SDL2 files to the correct structure from the devel package
-        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/bin/*.dll C:/SDL2/lib/x64/
-        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/lib/*.lib C:/SDL2/lib/x64/
-        
-        # Create proper include directory structure for SDL2
-        mkdir -p C:/SDL2/include/SDL2
-        copy C:/SDL2_devel_temp/SDL2-2.28.5/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/SDL2/
-        
-        # Download and extract SDL2_ttf development files
-        curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-devel-2.20.2-mingw.zip -o SDL2_ttf-devel.zip
-        Expand-Archive -Path SDL2_ttf-devel.zip -DestinationPath C:/SDL2_ttf_devel_temp -Force
-        
-        # List the extracted content to see structure
-        dir C:/SDL2_ttf_devel_temp -Recurse | Select-Object -First 20 FullName | Out-File -FilePath SDL2_ttf_structure.txt
-        Get-Content SDL2_ttf_structure.txt
-        
-        # Move SDL2_ttf files to the correct structure from the devel package
-        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/bin/*.dll C:/SDL2/lib/x64/
-        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/lib/*.lib C:/SDL2/lib/x64/ 
-        copy C:/SDL2_ttf_devel_temp/SDL2_ttf-2.20.2/x86_64-w64-mingw32/include/SDL2/*.h C:/SDL2/include/SDL2/
-        
-        # Check SDL directory structure
-        dir C:/SDL2
-        dir C:/SDL2/lib/x64
-        dir C:/SDL2/include
-        dir C:/SDL2/include/SDL2
-        
-        # Check for SDL_ttf.h specifically
-        if (Test-Path C:/SDL2/include/SDL2/SDL_ttf.h) {
-            echo "Found SDL_ttf.h at expected location"
-        } else {
-            echo "ERROR: SDL_ttf.h not found at C:/SDL2/include/SDL2/SDL_ttf.h"
-            echo "Current content of SDL2/include/SDL2 directory:"
-            Get-ChildItem C:/SDL2/include/SDL2 | select Name
+        # Install Chocolatey if not already installed
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        try {
+            choco -v
+            echo "Chocolatey is already installed"
+        } catch {
+            echo "Installing Chocolatey..."
+            iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
         }
         
-        # Add SDL2 to path for build tools to find
-        echo "C:/SDL2/lib/x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        # Install MSYS2
+        choco install msys2 -y
+        
+        # Update MSYS2 packages
+        $env:PATH = "C:\tools\msys64\usr\bin;$env:PATH"
+        bash -lc "pacman -Syu --noconfirm"
+        
+        # Install SDL2 and SDL2_ttf via MSYS2/pacman
+        bash -lc "pacman -S --noconfirm mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf"
+        
+        # Show installed packages
+        bash -lc "pacman -Q | grep SDL"
+        
+        # Set up environment variables
+        $env:PATH = "C:\tools\msys64\mingw64\bin;$env:PATH"
+        echo "C:\tools\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+        # List SDL2 files
+        dir C:\tools\msys64\mingw64\bin\SDL2*.dll
+        dir C:\tools\msys64\mingw64\include\SDL2
+        
+        # Set up pkg-config
+        $env:PKG_CONFIG_PATH = "C:\tools\msys64\mingw64\lib\pkgconfig"
+        echo "PKG_CONFIG_PATH=C:\tools\msys64\mingw64\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        
+        # Verify pkg-config can find SDL2
+        bash -lc "pkg-config --cflags --libs sdl2 sdl2_ttf"
     
     - name: Install dependencies
       env:
-        SDL2_DIR: C:/SDL2
-        SDL2_LIB_DIR: C:/SDL2/lib/x64
-        SDL2_INCLUDE_DIR: C:/SDL2/include
-        # Configure LD_LIBRARY_PATH to find the SDL2 dlls
-        LD_LIBRARY_PATH: C:/SDL2/lib/x64
+        PKG_CONFIG_PATH: C:\tools\msys64\mingw64\lib\pkgconfig
       run: |
-        # Check what's in the include directories
-        dir C:/SDL2/include
-        dir C:/SDL2/include/SDL2
-        
-        # Create a cabal configuration for building SDL2 without pkgconfig
+        # Create a cabal configuration for building with pkgconfig
         echo "package sdl2" > cabal.project.local
-        echo "  flags: -pkgconfig" >> cabal.project.local
-        echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
-        echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+        echo "  flags: pkgconfig" >> cabal.project.local
+        echo "  extra-lib-dirs: C:\tools\msys64\mingw64\lib" >> cabal.project.local
+        echo "  extra-include-dirs: C:\tools\msys64\mingw64\include" >> cabal.project.local
         
         echo "package sdl2-ttf" >> cabal.project.local
-        echo "  flags: -pkgconfig" >> cabal.project.local
-        echo "  extra-lib-dirs: C:/SDL2/lib/x64" >> cabal.project.local
-        echo "  extra-include-dirs: C:/SDL2/include" >> cabal.project.local
+        echo "  flags: pkgconfig" >> cabal.project.local
+        echo "  extra-lib-dirs: C:\tools\msys64\mingw64\lib" >> cabal.project.local
+        echo "  extra-include-dirs: C:\tools\msys64\mingw64\include" >> cabal.project.local
         
         # Look at the cabal.project.local file to verify
         type cabal.project.local
@@ -105,40 +84,19 @@ jobs:
         # Install dependencies
         cabal install --lib UISF
         cabal install --lib HSoM
-        
-        # Download and patch sdl2-ttf Haskell package
-        git clone https://github.com/haskell-game/sdl2-ttf.git
-        cd sdl2-ttf
-        
-        # Find all hsc files that might include SDL_ttf.h
-        dir src -Recurse -Include *.hsc
-        
-        # Change Font.hsc to look for SDL_ttf.h with correct path
-        $fontFile = Get-Content -Path "src/SDL/Raw/Font.hsc" -Raw
-        $updatedFont = $fontFile -replace '#include "SDL_ttf.h"', '#include "SDL2/SDL_ttf.h"'
-        Set-Content -Path "src/SDL/Raw/Font.hsc" -Value $updatedFont
-        
-        # Show difference
-        echo "Original include was: #include ""SDL_ttf.h"""
-        echo "Updated include is: #include ""SDL2/SDL_ttf.h"""
-        
-        # Install the patched version
-        cabal install --lib . --extra-include-dirs=C:/SDL2/include --extra-lib-dirs=C:/SDL2/lib/x64
     
     - name: Build
       env:
-        SDL2_DIR: C:/SDL2
-        SDL2_LIB_DIR: C:/SDL2/lib/x64
-        SDL2_INCLUDE_DIR: C:/SDL2/include
-        LD_LIBRARY_PATH: C:/SDL2/lib/x64
+        PKG_CONFIG_PATH: C:\tools\msys64\mingw64\lib\pkgconfig
+        PATH: C:\tools\msys64\mingw64\bin;${{env.PATH}}
       # The cabal.project.local file created earlier is used here
       run: |
         # Additional environment variables to help find the headers
-        $env:C_INCLUDE_PATH = "C:/SDL2/include"
-        $env:CPLUS_INCLUDE_PATH = "C:/SDL2/include"
+        $env:C_INCLUDE_PATH = "C:\tools\msys64\mingw64\include"
+        $env:CPLUS_INCLUDE_PATH = "C:\tools\msys64\mingw64\include"
         
-        # Run the build with verbose output to see compiler commands
-        cabal build -v3
+        # Run the build
+        cabal build
     
     - name: Create executable directory
       run: |
@@ -162,8 +120,8 @@ jobs:
     - name: Copy DLL dependencies
       run: |
         # Copy all SDL2 DLLs
-        dir C:\SDL2\lib\x64\
-        copy C:\SDL2\lib\x64\*.dll dist\windows\
+        dir C:\tools\msys64\mingw64\bin\SDL2*.dll
+        copy C:\tools\msys64\mingw64\bin\SDL2*.dll dist\windows\
     
     - name: Copy README
       run: copy WINDOWS_README.md dist/windows/README.md
